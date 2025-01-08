@@ -15,7 +15,8 @@ files <- list.files(path = "~/trueNAS/work/Agroforestry/data/products/changeOver
 
 ## load in the grid file --- just need the spatial information so the year doesn't matter. 
 grids <- terra::vect("data/products/modelGrids_2010.gpkg")
-
+terra::plot(grids)
+View(as.data.frame(grids))
 ## ecoregion measures 
 ### Some template code for reprojecting the ecoregion file 
 # e1 <- terra::vect("data/raw/spatialAreaFiles/ecoregions/us_eco_l3.shp") |>
@@ -83,7 +84,7 @@ testGridIntersection <- function(spatialArea, grids, areaName, specificName, fil
     # Define the output file path
     path <- paste0(folder,"/pixelCounts_",id,"_", specificName,"_.csv")
     # test for the presence of the file before starting the process 
-    if(file.exist(path)){
+    if(file.exists(path)){
       next()
     }else{
       # Select the raster file corresponding to the current grid ID
@@ -120,6 +121,8 @@ testGridIntersection <- function(spatialArea, grids, areaName, specificName, fil
 # Apply the function to the first ecoregion as a test
 areaName <-"ecoRegionLevel3"
 specificName <- ecoCrop[1, ]$US_L3NAME 
+grids$originalArea <- round(terra::expanse(grids, unit = "km"), digits = 2)
+
 testGridIntersection(spatialArea = ecoCrop[1, ],
                      grids = grids,
                      areaName = areaName,
