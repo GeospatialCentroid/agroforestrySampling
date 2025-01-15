@@ -95,16 +95,17 @@ testGridIntersection <- function(spatialArea, grids, areaName, specificName, fil
         next()
       } else {
         r1 <- terra::rast(files[test1])
-        
+        # select the specific band needed 
+        r1 <- r1[[1]]
         # Mask the raster to the grid cell if the areas are not the same
         if(grid$sameArea == FALSE){
           r1 <- terra::mask(r1, grid)
         }
         
         # Calculate pixel counts for each value in the raster
-        vals <- freq(r1)
+        vals1 <- freq(r1)
+
         rm(r1) 
-        
         # Calculate total pixel count for each year based on specific values
         grid[,"cells2010"] <- sum(vals[vals$value %in% c(1,4,6,9),"count"], na.rm = TRUE)
         grid[,"cells2016"] <- sum(vals[vals$value %in% c(3,4,8,9),"count"], na.rm = TRUE)
@@ -131,7 +132,10 @@ testGridIntersection(spatialArea = ecoCrop[1, ],
 
 
 # Split the ecoregions into a list of individual ecoregion objects
-ecos <- ecoCrop |> terra::split("US_L3NAME" )
+## only needed for the purrr implementations 
+# ecos <- ecoCrop |> terra::split("US_L3NAME" )
+# keep as object for for loop 
+ecos <- ecoCrop
 
 # Apply the function to each ecoregion using a for loop
 for(i in 1:length(ecos)){
