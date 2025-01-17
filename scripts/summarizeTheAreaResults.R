@@ -89,3 +89,71 @@ folder <- "data/derived/areaCounts/ecoRegionLevel3"
 
 # Call the aggregateResults function and store the results
 results <- aggregateResults(folder)
+
+
+# generate percentages 
+results2 <- results |>
+  dplyr::mutate(
+    percent10 = (trees2010/totalArea)*100,
+    percent16 = (trees2016/totalArea)*100,
+    percent20 = (trees2020/totalArea)*100
+    
+  )
+View(results)
+
+
+# produce a plot ----------------------------------------------------------
+library(plotly)
+# Create a long format data frame for plotting
+df_long <- results2 %>%
+  select(name, percent10, percent16, percent20) %>%
+  tidyr::pivot_longer(cols = -name, names_to = "year", values_to = "percent_cover")
+
+# Create the Plotly bar chart
+plot_ly(df_long, x = ~name, y = ~percent_cover, color = ~year, type = "bar")%>%
+  layout(
+    title = "Percent Tree Cover Over Time",
+    xaxis = list(title = "Ecoregion Name"),
+    yaxis = list(title = "Percent Tree Cover"),
+    barmode = "group"  # Grouped bar chart
+  )
+
+# do a quite map to show locations of the eco regions 
+library(leaflet)
+# read in nebrasksa area 
+neb <- terra::vect("data/products/modelGrids_2010.gpkg")
+# read in ecoregions 
+eco <- terra::vect("data/raw/spatialAreaFiles/ecoregions/us_eco_l3.gpkg")
+ecoSel <- eco[eco$US_L3NAME %in% results2$name, ] |>
+  terra::crop(neb)
+# Define a color palette for the ecoregions
+pal <- colorFactor(palette = "viridis", domain = ecoSel$US_L3NAME)
+
+# Create the Leaflet map
+leaflet(ecoSel) %>%
+  addTiles() %>%
+  addPolygons(
+    fillColor = ~pal(US_L3NAME),
+    weight = 1,
+    opacity = 1,
+    color = "white",
+    dashArray = "3",
+    fillOpacity = 0.7,
+    highlight = highlightOptions(
+      weight = 2,
+      color = "#666",
+      dashArray = "",
+      fillOpacity = 0.7,
+      bringToFront = TRUE
+    ),
+    label = ~US_L3NAME,  # Label each ecoregion with its name
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "15px",
+      direction = "auto"
+    )
+  ) %>%
+  addLegend(
+    pal = pal, values = ~US_L3NAME, opacity = 0.7, title = "Ecoregions",
+    position = "bottomright"
+  )
