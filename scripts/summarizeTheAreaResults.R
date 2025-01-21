@@ -120,6 +120,7 @@ plot_ly(df_long, x = ~name, y = ~percent_cover, color = ~year, type = "bar")%>%
 
 # do a quite map to show locations of the eco regions 
 library(leaflet)
+
 # read in nebrasksa area 
 neb <- terra::vect("data/products/modelGrids_2010.gpkg")
 # read in ecoregions 
