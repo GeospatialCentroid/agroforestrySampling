@@ -80,24 +80,49 @@ grids <- mile2
 forest <- forestMask
 town <- townMask
   
-cropFeatures <- function(gridID, grids, forest,town){
+cropFeatures <- function(gridID, grids, modelID, year, forest,town){
   print(gridID)
   # select the grid 
   g1 <- grids[grids$FID_two_grid == gridID, ]
   # crop 1 
   f1 <- terra::crop(x = forest, y = g1)
   t1 <- terra::crop(x = town, y = g1)
-  return(list(forest = f1, town = t1))
+  # construct paths 
+  fPath <- paste0("data/products/selectSubGridMasks/forest_",
+                  modelID,"_",gridID,"_",year,".gpkg")
+  tPath <- paste0("data/products/selectSubGridMasks/town_",
+                  modelID,"_",gridID,"_",year,".gpkg")
+  # export 
+  terra::writeVector(x = f1, filename = fPath, overwrite=TRUE)
+  terra::writeVector(x = t1, filename = tPath, overwrite=TRUE)
 }
-    
-id2016 <- c("594","12659","11710","18037","6165","12781","11319","24110","17395")	
+# read in the reference dataset 
+df <- readr::read_csv(
+  "data/products/selectSubGridMasks/PixelCounts(Masks).csv",
+  col_names = FALSE)
+names(df) <- c("model", "ID", "year")
+for(i in 1:nrow(df)){
+  print(i)
+  cropFeatures(gridID = df$ID[i],
+               grids = grids,
+               modelID = df$model[i],
+               year = df$year[i],
+               forest = forestMask,
+               town = townMask)
+}
 
-results <- purrr::map(.x = id2016, .f = cropFeatures,
-                      grids = mile2, 
-                      forest = forestMask,
-                      town = townMask)
-
-
+# 2016
+purrr::map(.x = id2016, .f = cropFeatures,
+           year = "2016",
+           grids = mile2, 
+           forest = forestMask,
+           town = townMask)
+#2010
+purrr::map(.x = id2010, .f = cropFeatures,
+           year = "2010",
+           grids = mile2, 
+           forest = forestMask,
+           town = townMask)
 
 
 
