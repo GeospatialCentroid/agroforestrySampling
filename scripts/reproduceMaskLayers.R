@@ -111,18 +111,6 @@ for(i in 1:nrow(df)){
                town = townMask)
 }
 
-# 2016
-purrr::map(.x = id2016, .f = cropFeatures,
-           year = "2016",
-           grids = mile2, 
-           forest = forestMask,
-           town = townMask)
-#2010
-purrr::map(.x = id2010, .f = cropFeatures,
-           year = "2010",
-           grids = mile2, 
-           forest = forestMask,
-           town = townMask)
 
 
 
