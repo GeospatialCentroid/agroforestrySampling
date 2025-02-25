@@ -59,26 +59,92 @@ samplePoints <- function(aoi, nSamples, random){
 p1 <- samplePoints(
   aoi = ecos[2, ],
   nSamples = 50,
-  random = TRUE,
-  chess = TRUE
+  random = FALSE
 )
+
+terra::plot(ecos[2,])
+terra::plot(p1, add=TRUE)
+
+
 ## get a plot that show the results of the techniques 
 aoi <- ecos[1,]
 gridArea <- g10
 nSamples <- 100 
 random <- FALSE
 
-# adjust this function so I can assign a proprotion sample size that attached to the object
+# adjust this function so I can assign a proprotion sample size that attached to the obje
 
 
-samplePoints12m <- function(aoi, nSamples, random, gridArea, year){
+sampleGrids <- function(aoi, nSamples, random, gridArea){
   # crop and mask sub grid to the aoi 
   a1 <- gridArea |>
-    terra::crop(aoi)
+    terra::crop(aoi) 
   # sample 
   p1 <- samplePoints(aoi = a1, 
                      nSamples = nSamples,
                      random = random)
+  # get grid ID 
+  return(p1)
+}
+
+# stratified random sample  -----------------------------------------------
+points <- sampleGrids(
+  aoi = aoi,
+  nSamples = 500,
+  random = TRUE,
+  gridArea = gridArea
+)
+# get the forest count information 
+files <- list.files(path = "data/derived/areaCounts/EPA_Level3",
+                    pattern = ".csv",
+                    full.names = TRUE)
+## select features with name from aoi object 
+aoiID <- aoi$US_L3NAME[1]
+feats <- files[grepl(pattern = aoiID, x = files)]
+## read in features to single dataframe
+df <- readr::read_csv(feats)
+
+## propotional assing sample 
+
+# Calculate proportions
+df <- df %>%
+  mutate(total_2010 = sum(cells2010)) %>%
+  mutate(proportion2010 = cells2010 / total_2010)|>
+  mutate(count2010 = round(500 * proportion2010),0)
+
+# sample points per grid base on the count 
+df2 <- df[df$count2010 >0, ]
+vals <- 
+for(i in 1:nrow(df2)){
+  # select spatial object from side ID 
+  g1 <- g10[g10$Unique_ID == df2$Unique_ID[i], ]
+  
+  d1 <- samplePoints(aoi = g1, 
+               nSamples = df2$count2010[i],
+               random = TRUE)
+  if(i == 1){
+    d2 <- d1
+  }else{
+    add(d2) <- d1
+  }
+}
+
+
+# Extract the model grids  ------------------------------------------------
+
+
+
+
+samplePointsMaps <- function(aoi, nSamples, random, gridArea, year){
+  # crop and mask sub grid to the aoi 
+  a1 <- gridArea |>
+    terra::crop(aoi) 
+  a1$weight <- 
+    # sample 
+    p1 <- samplePoints(aoi = a1, 
+                       nSamples = nSamples,
+                       random = random,
+    )
   # plot results 
   terra::plot(a1)
   terra::plot(p1, add=TRUE,
@@ -92,14 +158,5 @@ samplePoints12m(aoi = aoi,
                 random = FALSE,
                 gridArea = gridArea,
                 year = NA)
-
-
-
-
-
-
-# Extract the model grids  ------------------------------------------------
-
-
 
 
