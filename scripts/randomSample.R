@@ -67,7 +67,7 @@ terra::plot(p1, add=TRUE)
 
 
 ## get a plot that show the results of the techniques 
-aoi <- ecos[1,]
+aoi <- ecos[2,]
 gridArea <- g10
 nSamples <- 100 
 random <- FALSE
@@ -90,7 +90,7 @@ sampleGrids <- function(aoi, nSamples, random, gridArea){
 # stratified random sample  -----------------------------------------------
 points <- sampleGrids(
   aoi = aoi,
-  nSamples = 500,
+  nSamples = 100,
   random = TRUE,
   gridArea = gridArea
 )
@@ -110,14 +110,24 @@ df <- readr::read_csv(feats)
 df <- df %>%
   mutate(total_2010 = sum(cells2010)) %>%
   mutate(proportion2010 = cells2010 / total_2010)|>
-  mutate(count2010 = round(500 * proportion2010),0)
+  mutate(count2010 = round(250 * proportion2010),0)
 
 # sample points per grid base on the count 
-df2 <- df[df$count2010 >0, ]
-vals <- 
+df2 <- df[df$count2010 >0, ] |>
+  dplyr::select("Unique_ID", "cells2010", "total_2010","proportion2010", "count2010")
+View(df2)
+
+df3 <- df2[,c("Unique_ID","count2010")]
+
+aoi <- ecos[2,]
+gridArea <- g10 |>
+  terra::crop(aoi)
+
+gsf <- sf::st_as_sf(gridArea)
+
 for(i in 1:nrow(df2)){
   # select spatial object from side ID 
-  g1 <- g10[g10$Unique_ID == df2$Unique_ID[i], ]
+  g1 <- gridArea[gridArea$Unique_ID == df2$Unique_ID[i], ]
   
   d1 <- samplePoints(aoi = g1, 
                nSamples = df2$count2010[i],
@@ -125,11 +135,14 @@ for(i in 1:nrow(df2)){
   if(i == 1){
     d2 <- d1
   }else{
-    add(d2) <- d1
+    d2 <- rbind(d2,d1)
   }
 }
+# bind data to sf object 
+gs <- terra::merge(x = gridArea, y = df2, by = "Unique_ID")
 
-
+terra::plot(gridArea)
+terra::plot(d2, add = TRUE)
 # Extract the model grids  ------------------------------------------------
 
 
@@ -153,7 +166,7 @@ samplePointsMaps <- function(aoi, nSamples, random, gridArea, year){
 }
 
 # Sampling on a the 12mile grid  ------------------------------------------
-samplePoints12m(aoi = aoi,
+samplePointsMaps(aoi = aoi,
                 nSamples = 100, 
                 random = FALSE,
                 gridArea = gridArea,
