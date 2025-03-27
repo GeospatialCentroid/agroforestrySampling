@@ -26,7 +26,7 @@
 ## step three summaries the results 
 
 
-pacman::p_load("terra", "dplyr")
+pacman::p_load("terra", "dplyr", "readr", "tictoc")
 
 
 # sampling function  ------------------------------------------------------
@@ -34,13 +34,238 @@ pacman::p_load("terra", "dplyr")
 grids <- list.files("data/products/modelGrids",
                     pattern = ".gpkg",
                     full.names = TRUE)
-g2 <- terra::vect(grids[grepl(pattern = "two_sq", x = grids)])
+# g2 <- terra::vect(grids[grepl(pattern = "two_sq", x = grids)])
 g10 <- terra::vect(grids[grepl(pattern = "2010", x = grids)])
 g16 <- terra::vect(grids[grepl(pattern = "2016", x = grids)])
 g20 <- terra::vect(grids[grepl(pattern = "2020", x = grids)])
 
 # aoi's 
 ecos <- terra::vect("data/derived/spatialFiles/us_eco_l3.gpkg")
+
+# determine the total forested areas with the region of interest 
+## using the central great plains as the reference areas 
+cgp <- ecos[ecos$US_L3NAME == "Central Great Plains", ]
+# area files 
+areaFiles <- list.files(path = "data/derived/areaCounts/EPA_Level3",
+                        full.names = TRUE)
+cpgFiles <- areaFiles[grepl(pattern = "Central Great Plains", x = areaFiles)] |>
+  readr::read_csv()
+# full area
+fullArea <- terra::expanse(x = cgp, unit = "m")
+# percent tof
+total10 <- (sum(cpgFiles$cells2010)/fullArea)*100
+total16 <- (sum(cpgFiles$cells2016)/fullArea)*100
+total20 <- (sum(cpgFiles$cells2020)/fullArea)*100
+
+
+
+# sampling method 1 : random draw each time  ------------------------------
+
+
+
+# sampling method 2 : single large draw  -------------------------------
+## generate a random sample of points across the region, 
+## exatract values from those points 
+samplePoints <- function(aoi, nSamples, random){
+  # condition for sampling techinic 
+  if(isTRUE(random)){
+    method = "random"
+  }else{
+    method = "regular"
+  }
+  
+  p1 <- terra::spatSample(x = aoi, 
+                          method = method, 
+                          size = nSamples)
+}
+
+# crop the 12m grid to aoi 
+aoi2 <- terra::crop(g10, cgp)
+
+ranSample <- samplePoints(aoi = aoi2, nSamples = 100000, random = TRUE)
+
+# get a list of AOI from the random points 
+areas <- unique(ranSample$Unique_ID)
+# for over areas, read in raster and extract points from that area 
+for(i in seq_along(areas)){
+  # grid 
+  gridName <- areas[i]
+  print(gridName)
+  # 
+  file <- paste0("~/trueNAS/work/Agroforestry/data/products/changeOverTime/",
+                 gridName,"_changeOverTime_2.tif")
+  if(file.exists(file)){
+    # read in raster
+    r1 <- terra::rast(file)
+    # filter selection and extract 
+    p1 <- ranSample[ranSample$Unique_ID == gridName, ]
+    
+    # extracted values 
+    vals <- terra::extract(x = r1[[1]], y = p1)
+    # save as df 
+    df2 <- as.data.frame(p1) |>
+      dplyr::mutate(ChangeOverTime = vals$ChangeOverTime)|>
+      dplyr::select(Unique_ID, ChangeOverTime)
+    # just bind for now 
+    if(i == 1){
+      df <- df2
+    }else{
+      df <- bind_rows(df, df2)
+    }
+  }
+}
+
+## from here I can use the same sampling method from method 3 
+## test sample at a few seeds 
+seeds <- 1:10
+results <- data.frame(year = c(2010,2016,2020), sample = NA)
+
+threshold <- total10
+
+
+
+for(i in 1:3){
+  year <- results$year[i]
+  if(year == 2010){
+    threshold <- total10
+  }
+  if(year == 2016){
+    threshold <- total16
+  }
+  if(year == 2020){
+    threshold <- total20
+  }
+  for(j in seeds){
+    val <- fullSample(df = df,
+                      year = year,
+                      threshold = threshold,
+                      margin = margin,
+                      seed = j)
+    if(j == 1){
+      result <- val
+    }else{
+      result <- c(result, val)
+    }
+  }
+  results[i,2] <- round(mean(result))
+}
+
+
+# sampling method 3 : full area ----------------------------
+grids <- cpgFiles$Unique_ID
+
+# pull a grid and convert to point 
+## using a grid that we know is fully inside of the sample area X12-213
+
+r1 <- terra::rast("~/trueNAS/work/Agroforestry/data/products/changeOverTime/X12-213_changeOverTime_2.tif")
+tic()
+points <- as.data.frame(terra::values(r1$ChangeOverTime))
+toc()
+# full grid ~ 7.5 secs 
+### would need to export this file but lets work with it for now 
+
+
+# looking at the frequency of measure in this area 
+freq <- points %>%
+  count(ChangeOverTime) %>%
+  mutate(proportion = n / sum(n))
+
+
+df <- points
+year <- 2016
+threshold <- total16
+margin <- 0.10
+seed <- 1234
+
+fullSample <- function(df, year, threshold, margin, seed){
+  # set seed 
+  set.seed(seed)
+  # set max attempt 
+  max_attempts <- 100 # Limit the number of attempts to avoid infinite loops
+  # parameters for first loop 
+  n = 1000
+  attempt <- 0
+  
+  # find acceptable range 
+  low <- threshold - (threshold * margin)
+  high <- threshold + (threshold * margin)
+  
+
+  # set the tof values of interest 
+  if(year == 2010){
+    vals <- c(1,4,6,9)
+  }
+  if(year == 2016){
+    vals <- c(3,4,8,9)
+  }
+  if(year == 2020){
+    vals <- c(5,6,8,9)
+  }
+  mean <- 0
+  while(TRUE){
+    # sample ten itorations at N and average 
+    for(i in 1:20){
+      selection <- df |>
+        slice_sample(n = round(n))|>
+        filter(ChangeOverTime %in% vals) |>
+        nrow()
+      if(i == 1){
+        average <- selection
+      }else{
+        average <- c(average, selection)
+      }
+    }
+    # average selection 
+    mean <- mean(average)
+    # print(mean)
+    if(mean >= low && mean <= high){
+      return(round(n))
+      stop()
+    }else{
+      attempt <- attempt + 1
+      if(mean > high){
+        n = n/1.5
+      }else{
+        n = n * 2
+      }
+    }  
+  }
+}
+
+
+## test sample at a few seeds 
+seeds <- 1:10
+results <- data.frame(year = c(2010,2016,2020), sample = NA)
+
+for(i in 1:3){
+  year <- results$year[i]
+  for(j in seeds){
+    val <- fullSample(df = df,
+                      year = year,
+                      threshold = threshold,
+                      margin = margin,
+                      seed = j)
+    if(j == 1){
+      result <- val
+    }else{
+      result <- c(result, val)
+    }
+  }
+  results[i,2] <- round(mean(result))
+}
+
+
+
+
+
+
+
+# original Effort ---------------------------------------------------------
+
+
+
+
+
 
 samplePoints <- function(aoi, nSamples, random){
   # condition for sampling techinic 
