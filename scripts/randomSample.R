@@ -26,7 +26,7 @@
 ## step three summaries the results 
 
 
-pacman::p_load("terra", "dplyr", "readr", "tictoc")
+pacman::p_load("terra", "dplyr", "readr", "tictoc", "tmap")
 
 
 # sampling function  ------------------------------------------------------
@@ -145,8 +145,9 @@ samplePoints <- function(aoi, nSamples, random){
 # crop the 12m grid to aoi 
 aoi2 <- terra::crop(g10, cgp)
 
-ranSample <- samplePoints(aoi = aoi2, nSamples = 100000, random = FALSE)
-
+ranSample <- samplePoints(aoi = aoi2, nSamples = 100000, random = TRUE)
+tmap_mode("view")
+qtm(sf::st_as_sf(ranSample))
 
 # get a list of AOI from the random points 
 areas <- unique(ranSample$Unique_ID)
@@ -180,18 +181,16 @@ for(i in seq_along(areas)){
 }
 # export these results 
 ## need a more comprehesive way for naming 
-write_csv(df, paste0("data/derived/spatialSampling/ecoRegion_CentralGreatPlains_systematic_1000000.csv"))
+# write_csv(df, paste0("data/derived/spatialSampling/ecoRegion_CentralGreatPlains_systematic_1000000.csv"))
 
 
 ## from here I can use the same sampling method from method 3 
 ## test sample at a few seeds 
-seeds <- 1:10
+seeds <- 1:20
 results <- data.frame(year = c(2010,2016,2020), sample = NA)
-margin <- 0.10
-threshold <- total10
+margin <- 0.02
 
-
-
+## loop for calculating the aver number needed 
 for(i in 1:3){
   year <- results$year[i]
   if(year == 2010){
@@ -214,6 +213,7 @@ for(i in 1:3){
     }else{
       result <- c(result, val)
     }
+    print(result)
   }
   results[i,2] <- round(mean(result))
 }
