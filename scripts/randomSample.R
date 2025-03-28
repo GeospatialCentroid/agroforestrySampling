@@ -59,13 +59,65 @@ total20 <- (sum(cpgFiles$cells2020)/fullArea)*100
 
 
 
-# sampling method 1 : random draw each time  ------------------------------
+# functiuons  -------------------------------------------------------------
 
+## itorative method to determine the number of locations required for a percentile match 
+fullSample <- function(df, year, threshold, margin, seed){
+  # set seed 
+  set.seed(seed)
+  # set max attempt 
+  max_attempts <- 100 # Limit the number of attempts to avoid infinite loops
+  # parameters for first loop 
+  n = 1000
+  attempt <- 0
+  
+  # find acceptable range 
+  low <- threshold - (threshold * margin)
+  high <- threshold + (threshold * margin)
+  
+  
+  # set the tof values of interest 
+  if(year == 2010){
+    vals <- c(1,4,6,9)
+  }
+  if(year == 2016){
+    vals <- c(3,4,8,9)
+  }
+  if(year == 2020){
+    vals <- c(5,6,8,9)
+  }
+  mean <- 0
+  while(TRUE){
+    # sample ten itorations at N and average 
+    for(i in 1:20){
+      selection <- df |>
+        slice_sample(n = round(n))|>
+        filter(ChangeOverTime %in% vals) |>
+        nrow()
+      if(i == 1){
+        average <- selection
+      }else{
+        average <- c(average, selection)
+      }
+    }
+    # average selection 
+    mean <- mean(average)
+    # print(mean)
+    if(mean >= low && mean <= high){
+      return(round(n))
+      stop()
+    }else{
+      attempt <- attempt + 1
+      if(mean > high){
+        n = n/1.5
+      }else{
+        n = n * 2
+      }
+    }  
+  }
+}
 
-
-# sampling method 2 : single large draw  -------------------------------
-## generate a random sample of points across the region, 
-## exatract values from those points 
+# spatial sample random or systematic 
 samplePoints <- function(aoi, nSamples, random){
   # condition for sampling techinic 
   if(isTRUE(random)){
@@ -79,10 +131,22 @@ samplePoints <- function(aoi, nSamples, random){
                           size = nSamples)
 }
 
+
+
+
+# sampling method 1 : random draw each time  ------------------------------
+
+
+
+# sampling method 2 : single large draw  -------------------------------
+## generate a random sample of points across the region, 
+## exatract values from those points 
+
 # crop the 12m grid to aoi 
 aoi2 <- terra::crop(g10, cgp)
 
-ranSample <- samplePoints(aoi = aoi2, nSamples = 100000, random = TRUE)
+ranSample <- samplePoints(aoi = aoi2, nSamples = 100000, random = FALSE)
+
 
 # get a list of AOI from the random points 
 areas <- unique(ranSample$Unique_ID)
@@ -114,12 +178,16 @@ for(i in seq_along(areas)){
     }
   }
 }
+# export these results 
+## need a more comprehesive way for naming 
+write_csv(df, paste0("data/derived/spatialSampling/ecoRegion_CentralGreatPlains_systematic_1000000.csv"))
+
 
 ## from here I can use the same sampling method from method 3 
 ## test sample at a few seeds 
 seeds <- 1:10
 results <- data.frame(year = c(2010,2016,2020), sample = NA)
-
+margin <- 0.10
 threshold <- total10
 
 
@@ -177,60 +245,6 @@ threshold <- total16
 margin <- 0.10
 seed <- 1234
 
-fullSample <- function(df, year, threshold, margin, seed){
-  # set seed 
-  set.seed(seed)
-  # set max attempt 
-  max_attempts <- 100 # Limit the number of attempts to avoid infinite loops
-  # parameters for first loop 
-  n = 1000
-  attempt <- 0
-  
-  # find acceptable range 
-  low <- threshold - (threshold * margin)
-  high <- threshold + (threshold * margin)
-  
-
-  # set the tof values of interest 
-  if(year == 2010){
-    vals <- c(1,4,6,9)
-  }
-  if(year == 2016){
-    vals <- c(3,4,8,9)
-  }
-  if(year == 2020){
-    vals <- c(5,6,8,9)
-  }
-  mean <- 0
-  while(TRUE){
-    # sample ten itorations at N and average 
-    for(i in 1:20){
-      selection <- df |>
-        slice_sample(n = round(n))|>
-        filter(ChangeOverTime %in% vals) |>
-        nrow()
-      if(i == 1){
-        average <- selection
-      }else{
-        average <- c(average, selection)
-      }
-    }
-    # average selection 
-    mean <- mean(average)
-    # print(mean)
-    if(mean >= low && mean <= high){
-      return(round(n))
-      stop()
-    }else{
-      attempt <- attempt + 1
-      if(mean > high){
-        n = n/1.5
-      }else{
-        n = n * 2
-      }
-    }  
-  }
-}
 
 
 ## test sample at a few seeds 
