@@ -13,6 +13,9 @@ files <- list.files(path = "~/trueNAS/work/Agroforestry/data/products/changeOver
                     full.names = TRUE,
                     pattern = "_2.tif")
 
+
+
+
 ## load in the grid file --- just need the spatial information so the year doesn't matter. 
 grids <- terra::vect("data/products/modelGrids_2010.gpkg")
 terra::plot(grids)

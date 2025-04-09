@@ -85,11 +85,10 @@ aggregateResults <- function(folder){
 # Run the function 
 
 # Define the folder containing the CSV files
-folder <- "data/derived/areaCounts/ecoRegionLevel3" 
+folder <- "data/derived/areaCounts/EPA_Level3" 
 
 # Call the aggregateResults function and store the results
 results <- aggregateResults(folder)
-
 
 # generate percentages 
 results2 <- results |>
@@ -122,7 +121,7 @@ plot_ly(df_long, x = ~name, y = ~percent_cover, color = ~year, type = "bar")%>%
 library(leaflet)
 
 # read in nebrasksa area 
-neb <- terra::vect("data/products/modelGrids_2010.gpkg")
+neb <- terra::vect("data/products/modelGrids/modelGrids_2010.gpkg")
 # read in ecoregions 
 eco <- terra::vect("data/raw/spatialAreaFiles/ecoregions/us_eco_l3.gpkg")
 ecoSel <- eco[eco$US_L3NAME %in% results2$name, ] |>

@@ -1,3 +1,110 @@
+### 
+# sampling design idea 
+# use the 12m grid to gather samples 
+# test smaller areas within the sample 
+
+
+pacman::p_load("terra", "dplyr", "readr", "sf", "tictoc", "tmap")
+
+
+grids <- list.files("data/products/modelGrids",
+                    pattern = ".gpkg",
+                    full.names = TRUE)
+# g2 <- terra::vect(grids[grepl(pattern = "two_sq", x = grids)])
+g10 <- terra::vect(grids[grepl(pattern = "2010", x = grids)])
+g16 <- terra::vect(grids[grepl(pattern = "2016", x = grids)])
+g20 <- terra::vect(grids[grepl(pattern = "2020", x = grids)])
+
+# aoi's 
+ecos <- terra::vect("data/derived/spatialFiles/us_eco_l3.gpkg")
+
+# determine the total forested areas with the region of interest 
+## using the central great plains as the reference areas 
+cgp <- ecos[ecos$US_L3NAME == "Central Great Plains", ]
+# area files 
+areaFiles <- list.files(path = "data/derived/areaCounts/EPA_Level3",
+                        full.names = TRUE)
+cpgFiles <- areaFiles[grepl(pattern = "Central Great Plains", x = areaFiles)] |>
+  readr::read_csv()
+
+# full area
+fullArea <- terra::expanse(x = cgp, unit = "m")
+# percent tof
+total10 <- (sum(cpgFiles$cells2010)/fullArea)*100
+total16 <- (sum(cpgFiles$cells2016)/fullArea)*100
+total20 <- (sum(cpgFiles$cells2020)/fullArea)*100
+
+# remove any areas with less the full area 
+df2 <- cpgFiles[cpgFiles$sameArea == TRUE, ]
+
+# calculate the 
+# Function to convert square kilometers to hectares
+sq_km_to_ha <- function(sq_km) {
+  hectares <- sq_km * 100  # 1 square kilometer = 100 hectares
+  return(hectares)
+}
+# Function to convert square meters to hectares
+sq_m_to_ha <- function(sq_meters) {
+  hectares <- sq_meters / 10000  # 1 hectare = 10,000 square meters
+  return(hectares)
+}
+
+# covert the area measures to standardized unit hectarce
+df3 <- df2 |>
+  mutate(originalArea = sq_km_to_ha(df2$originalArea))|>
+  mutate(across(c(cells2010,cells2016,cells2020), sq_m_to_ha))
+
+totalArea <- sum(df3$originalArea) 
+total10 <- (sum(df3$cells2010)/totalArea)*100
+total16 <- (sum(df3$cells2016)/totalArea)*100
+total20 <- (sum(df3$cells2020)/totalArea)*100
+  
+# calculate the percent area of each grid per year
+percentArea <- function(num, dem){
+  val <- (num/dem)*100
+}
+df4 <- df3 |>
+  mutate(tof10 = percentArea(cells2010, originalArea),
+         tof16 = percentArea(cells2016, originalArea),
+         tof20 = percentArea(cells2020, originalArea))
+  
+# from here we randomly selecting areas calculating the average tof per for the year 
+# Do this 10 times and take the average of the iterations 
+# then increase the sample 
+seeds <- 1:10
+year <- 2010 
+threshold <- total10
+margin <- 0.1
+low <- threshold - (threshold * margin)
+high <- threshold + (threshold * margin)
+
+output <- data.frame(sample = 1:nrow(df4), aveResults = rep(0, nrow(df4)), standardDev = rep(0, nrow(df4)))
+
+for(i in 1:nrow(df4)){
+  for(seed in seeds){
+    set.seed(seed)
+    # select i number of sites
+    selection <- df4 |>
+      slice_sample(n = i)
+    # get the average trees per selection 
+    tof_10 <- mean(selection$tof10)
+    # store results
+    if(i == 1){
+      results <- c(tof_10)
+    }else{
+      results <- c(results, tof_10)
+    }
+  }
+  # summarize results 
+  output$aveResults[i] <- mean(results)
+  output$standardDev[i] <- sd(results)
+}
+
+
+
+# old from 04 01 meeting  -------------------------------------------------
+
+
 
 
 ### templating a function for running the sampling methods 
@@ -91,8 +198,8 @@ fullSample <- function(df, year, threshold, margin, seed){
     # sample ten itorations at N and average 
     for(i in 1:20){
       selection <- df |>
-        slice_sample(n = round(n))|>
-        filter(ChangeOverTime %in% vals) |>
+        # slice_sample(n = round(n))|>
+        filter(ChangeOverTime %in% vals)|>
         nrow()
       if(i == 1){
         average <- selection
@@ -101,7 +208,8 @@ fullSample <- function(df, year, threshold, margin, seed){
       }
     }
     # average selection 
-    mean <- mean(average)
+    mean <- mean(average)/n
+    print(mean)
     # print(mean)
     if(mean >= low && mean <= high){
       return(round(n))
@@ -114,6 +222,7 @@ fullSample <- function(df, year, threshold, margin, seed){
         n = n * 2
       }
     }  
+    print(n)
   }
 }
 
@@ -145,9 +254,9 @@ samplePoints <- function(aoi, nSamples, random){
 # crop the 12m grid to aoi 
 aoi2 <- terra::crop(g10, cgp)
 
-ranSample <- samplePoints(aoi = aoi2, nSamples = 100000, random = TRUE)
+ranSample <- samplePoints(aoi = aoi2, nSamples = 1000000, random = TRUE)
 tmap_mode("view")
-qtm(sf::st_as_sf(ranSample))
+# qtm(sf::st_as_sf(ranSample))
 
 # get a list of AOI from the random points 
 areas <- unique(ranSample$Unique_ID)
@@ -177,18 +286,21 @@ for(i in seq_along(areas)){
     }else{
       df <- bind_rows(df, df2)
     }
+  }else{
+    
   }
 }
 # export these results 
 ## need a more comprehesive way for naming 
-# write_csv(df, paste0("data/derived/spatialSampling/ecoRegion_CentralGreatPlains_systematic_1000000.csv"))
+write_csv(df, paste0("data/derived/spatialSampling/ecoRegion_CentralGreatPlains_random_10000000.csv"))
 
+# df <- read_csv(paste0("data/derived/spatialSampling/ecoRegion_CentralGreatPlains_random_1000000.csv"))
 
 ## from here I can use the same sampling method from method 3 
 ## test sample at a few seeds 
-seeds <- 1:20
+seeds <- 1:10
 results <- data.frame(year = c(2010,2016,2020), sample = NA)
-margin <- 0.02
+margin <- 0.01
 
 ## loop for calculating the aver number needed 
 for(i in 1:3){
