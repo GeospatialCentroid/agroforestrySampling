@@ -27,8 +27,12 @@ areaFiles <- list.files(path = "data/derived/areaCounts/EPA_Level3",
 cpgFiles <- areaFiles[grepl(pattern = "Central Great Plains", x = areaFiles)] |>
   readr::read_csv()
 
+# select all grids directlu 
+g10cpg <- g10[g10$Unique_ID %in% cpgFiles$Unique_ID, ] |>
+  terra::crop(cgp)
+
 # full area
-fullArea <- terra::expanse(x = cgp, unit = "m")
+fullArea <- terra::expanse(x = g10cpg, unit= "m") |> sum()
 # percent tof
 total10 <- (sum(cpgFiles$cells2010)/fullArea)*100
 total16 <- (sum(cpgFiles$cells2016)/fullArea)*100
@@ -36,6 +40,15 @@ total20 <- (sum(cpgFiles$cells2020)/fullArea)*100
 
 # remove any areas with less the full area 
 df2 <- cpgFiles[cpgFiles$sameArea == TRUE, ]
+
+# map of a selected grids 
+
+fullAreas <- g10cpg[g10cpg$Unique_ID %in% df2$Unique_ID, ]
+fullAreas_area <- terra::expanse(x = fullAreas, unit = "m") |> sum()
+
+# plot 
+terra::plot(cgp)
+terra::plot(fullAreas, add = TRUE)
 
 # calculate the 
 # Function to convert square kilometers to hectares
@@ -54,7 +67,7 @@ df3 <- df2 |>
   mutate(originalArea = sq_km_to_ha(df2$originalArea))|>
   mutate(across(c(cells2010,cells2016,cells2020), sq_m_to_ha))
 
-totalArea <- sum(df3$originalArea) 
+totalArea <- sq_m_to_ha(fullAreas_area)
 total10 <- (sum(df3$cells2010)/totalArea)*100
 total16 <- (sum(df3$cells2016)/totalArea)*100
 total20 <- (sum(df3$cells2020)/totalArea)*100
@@ -83,22 +96,63 @@ output <- data.frame(sample = 1:nrow(df4), aveResults = rep(0, nrow(df4)), stand
 for(i in 1:nrow(df4)){
   for(seed in seeds){
     set.seed(seed)
+    print(seed)
     # select i number of sites
     selection <- df4 |>
       slice_sample(n = i)
     # get the average trees per selection 
-    tof_10 <- mean(selection$tof10)
+    totalA <- sum(selection$originalArea)
+    totalTOF <- sum(selection$cells2010)
+    # percent value 
+    percentage <- (totalTOF/totalA)*100
     # store results
-    if(i == 1){
-      results <- c(tof_10)
+    if(seed == 1){
+      results <- c(percentage)
     }else{
-      results <- c(results, tof_10)
+      results <- c(results, percentage)
     }
   }
   # summarize results 
   output$aveResults[i] <- mean(results)
   output$standardDev[i] <- sd(results)
 }
+
+# let rework this so that one seed is used for all iterations then we test a different seed
+
+for(i in seeds){
+  set.seed(i)
+  # set storage dataframe
+  output2 <- data.frame(sample = 1:nrow(df4),
+                       aveResults = rep(0, nrow(df4)),
+                       standardDev = rep(0, nrow(df4)),
+                       seed = rep(i, nrow(df4)))
+    for(j in 1:nrow(df4)){
+      # select i number of sites
+      selection <- df4 |>
+        slice_sample(n = j)
+      # get the average trees per selection 
+      totalA <- sum(selection$originalArea)
+      totalTOF <- sum(selection$cells2010)
+      # percent value 
+      percentage <- (totalTOF/totalA)*100
+      # second percent calulation 
+      percentageVals <- (selection$cells2010/selection$originalArea)*100
+      
+      
+      # sort the results 
+      output2$aveResults[j] <- mean(percentageVals)
+      output2$standardDev[j] <- sd(percentageVals)
+    }
+  if(i == 1){
+    results <- output2
+  }else{
+    results <- bind_rows(results, output2)
+  }
+}
+
+# compare the results between the two options 
+
+
 
 
 
