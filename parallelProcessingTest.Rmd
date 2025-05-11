@@ -1,0 +1,289 @@
+# testing parallization in R 
+
+As a dataprocessing workflow gets larger it can be expected to take longer to run.
+and 
+It's quite intuitive to imagine that parallizing a workflow would make it run faster
+but 
+Yet in my experience with the R environment, parallization can but is not guraenteed to improve run times.
+
+Therefore 
+Within the follow text I've attempt to produce a worked example to test these assumptions using the R package furrr. 
+
+
+## Problem 
+I have around 700 12x12 mile, 1m resolution raster files that I need to read in and produce summary of the total number of pixels of a specific value. There are three sets of summaries I need to render for each image. 
+
+That tasks is fairly simple 
+
+```{r}
+r1 <- terra::rast("path to raster")
+vals <- terra::values(r1)
+# summary values 
+set1 <- sum(vals[vals %in% c(1,4,6,9)], na.rm = TRUE)
+set2 <- sum(vals[vals %in% c(3,4,8,9)], na.rm = TRUE)
+set3 <- sum(vals[vals %in% c(5,6,8,9)], na.rm = TRUE)
+
+```
+
+The specific values with the %in% condition are related to the underlying data. 
+
+We can make this a function and add some additional steps to export out results 
+```{r}
+getArea <- function(file){
+  # get name of the area  -- specific to the file storage 
+  b1 <- basename(file) |> 
+    stringr::str_split(pattern = "_")|>
+    unlist()
+  name <- b1[1]
+  
+  path <- paste0("data/derived/areaCounts/fullState/",name,".csv")
+  if(!file.exists(path)){
+    # read in cot 
+    r1 <- terra::rast(file)
+    # select specific layer of the raster required 
+    vals <- terra::values(r1$ChangeOverTime)[,1]
+    # set a df for storing results 
+    df <- data.frame(
+      grid = name,
+      cells2010 = NA,
+      cells2016 = NA,
+      cells2020 = NA
+    )
+    
+    # Calculate total pixel count for each year based on specific values
+    df[,"cells2010"] <- sum(vals[vals %in% c(1,4,6,9)], na.rm = TRUE)
+    df[,"cells2016"] <- sum(vals[vals %in% c(3,4,8,9)], na.rm = TRUE)
+    df[,"cells2020"] <- sum(vals[vals %in% c(5,6,8,9)], na.rm = TRUE)
+    
+    # Convert the grid cell to a data frame and export to CSV
+    readr::write_csv(x = df, file = path)
+  }
+  # clear memory to keep from bloating and system crashing 
+  gc()
+}
+```
+
+In a sequential workflow you could use a for loop or a purrr::map function to render the results 
+
+```{r}
+## load in the files locations 
+allFiles <- list.files(path = "data/products/changeOverTime",
+                    full.names = TRUE,
+                    pattern = "_2.tif")
+
+# for loop 
+for(i in allFiles){
+  print(i)
+  getArea(i)
+}
+
+# purrr
+## might want to add a print statement inside of the function to track progress. 
+purrr::map(.x = files, .f = getArea)
+
+```
+
+This is where a lot of my workflows of the past have ended. For one important reason. 
+
+1. it works 
+
+Yes, it's potential slower, but optimization can often come with it's own time costs. So usually it's a test the process on multiple iterations of the loop and then let it run outside of the work hours. 
+
+
+## Parallel Processing in R 
+
+So if you don't want to end there or the run times are painful, we can start parallel processing. 
+
+The library [furrr](https://furrr.futureverse.org/) is a great place to start. What make's it approachable is that it's a natural extension of the purrr::map functionality. So in a very simple sense, you can flip the functions. 
+
+```{r}
+## load in the files locations 
+allFiles <- list.files(path = "data/products/changeOverTime",
+                    full.names = TRUE,
+                    pattern = "_2.tif")
+# purrr
+## might want to add a print statement inside of the function to track progress. 
+purrr::map(.x = files, .f = getArea)
+
+# furrr 
+furrr::future_map(.x = files, .f = getArea)
+
+```
+
+As written this isn't going doing anything different because furrr requires by default uses a sequential plan. Parallel processing requires having a plan and there are three options 
+
+1. Sequential : linear processing 
+2. Multicore : parallel processing,
+  - one environment, jobs passed to specific workers 
+  - doesn't work well within rstudio or windows
+3. Mutlisession : parallel processing 
+  - environment is duplicated for each worker 
+  - more memory overhead because environmental is replicated 
+  
+```{r}
+## load in the files locations 
+allFiles <- list.files(path = "data/products/changeOverTime",
+                    full.names = TRUE,
+                    pattern = "_2.tif")
+
+# furrr 
+# only one plan can be used at a time 
+# calling plans in line like this will result in the last line being used 
+plan("multicore", workers = 4)
+plan("future::multisession", workers = 4)
+furrr::future_map(.x = files, .f = getArea)
+```
+
+So there are some quick options for testing run times, like `tictoc` . 
+To be able to test these options we can work out another function runs the results 
+
+
+```{r}
+
+callWorkflow <- function(files, workers, type){
+  # files: vector of paths to objects 
+  # workers : number of cores to be used in the parallel processing effort 
+  # type : one of the option sequential, multicores, multisession 
+  if(type == "sequential"){
+    plan(sequential)
+  }
+  if(type == "multicore"){
+    plan("multicore", workers = workers) 
+  }
+  if(type == "multisession"){
+    plan("future::multisession", workers = workers) 
+  }
+  
+  # call the main method 
+  furrr::future_map(.x = files, .f = fullStateArea)
+}
+```
+
+With this we can then set up a structure for testing the run times of specific parallel tasks. We will also want to record the times for comparison later
+
+```{r}
+# clear files before next run -- important just for testing purposes as we
+# want to compare the some file for each run 
+removeFiles <- function(){
+  f1 <- list.files("data/derived/areaCounts/fullState",
+                   pattern = "^X",
+                   full.names = TRUE) 
+  file.remove(f1)
+}
+# get numerical value from toc message 
+getNumber <- function(v){
+  feat <- v$callback_msg |>
+    stringr::str_split(pattern = " ") |>
+    unlist()
+  return(feat[1])
+}
+
+
+# set parameters for the run tests  ---------------------------------------
+for(i in c(2,4,8)){
+  # workers are limited by your processor, so take a look with parallel::detectCores()
+  workers <- i 
+  # initial state that test the some cores and output 
+  if(i == 2){
+    files <- allFiles[1:2*i]
+  }else{
+    # just doubling the files so it not always the same workers and files 
+    double <- i *2
+    files <- allFiles[1:double]
+  }
+  # storage DF 
+  df <- data.frame(
+    totalFiles = length(files),
+    workers = workers,
+    sequential = NA,
+    multisession = NA,
+    mutlicore = NA
+  )
+  
+  ## sequential 
+  print("sequential")
+  tic()
+  callWorkflow(files = files, 
+               workers = workers,
+               type = "sequential")
+  v <- toc()
+  df$sequential <- getNumber(v)
+  # clean for next run 
+  removeFiles()
+  
+  ## multisession  
+  print("multisession")
+  tic()
+  callWorkflow(files = files, 
+               workers = workers,
+               type = "multisession")
+  v1 <- toc()
+  df$multisession <- getNumber(v1)
+  # clean for next run 
+  removeFiles()
+  
+  
+  ## mutlicore 
+  print("mutlicore")
+  tic()
+  callWorkflow(files = files, 
+               workers = workers,
+               type = "mutlicore")
+  v2 <- toc()
+  df$mutlicore <- getNumber(v2)
+  # clean for next run 
+  removeFiles()
+  
+  # export summary files 
+  readr::write_csv(x = df, file = paste0(
+    "data/derived/areaCounts/fullState/runtime_",
+    df$totalFiles, "-files_", 
+    df$workers, "-workers.csv"
+  ))
+}
+
+```
+
+## Running the workflow 
+
+Because the `multicore` methods is not expected to work when ran through the Rstudio environment this is not something you want to run from the interface directly. Here are two options 
+
+**from terminal**
+```{bash}
+Rscript pathtoyourfile 
+# examples 
+# Rscript scripts/calculateForestRegionForState.R 
+```
+
+**backgrond jobs**
+Navigate to the "background jobs" tab and select the `start background job` fill in the parmeters. 
+
+
+## Summary of results 
+
+Upload table 
+
+This is a limited test but there are a few key take aways. 
+
+1. sequential is slowest at around ~15 to 21 seconds per fiel 
+2. multicore is slightly fast per run then multisession 
+3. the efficently of the parallel processes grows the more interations and workers provided. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
