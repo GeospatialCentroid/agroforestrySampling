@@ -7,23 +7,32 @@
 pacman::p_load("terra", "dplyr", "readr", "sf", "tictoc", "tmap")
 
 
-grids <- list.files("data/products/modelGrids",
-                    pattern = ".gpkg",
-                    full.names = TRUE)
-# g2 <- terra::vect(grids[grepl(pattern = "two_sq", x = grids)])
-g10 <- terra::vect(grids[grepl(pattern = "2010", x = grids)])
-g16 <- terra::vect(grids[grepl(pattern = "2016", x = grids)])
-g20 <- terra::vect(grids[grepl(pattern = "2020", x = grids)])
 
-# aoi's 
-ecos <- terra::vect("data/derived/spatialFiles/us_eco_l3.gpkg")
+
+
+# Ecoregion layers  -------------------------------------------------------
+
+
+# areas become the input value to the function 
+vectPath <- "data/derived/spatialFiles/us_eco_l3.gpkg"
+areaPath <- "data/derived/areaCounts/EPA_Level3"
+prepAreasForSample <- function(vectPath, vectID,  areaPath){
+  # aoi's 
+  vect <- terra::vect(vectPath)
+  # unique areas 
+  areaNames <- unique(vect[,vectID])
+  # area files 
+  areaFiles <- list.files(path = areaPath,
+                          full.names = TRUE)
+  
+  
+}
 
 # determine the total forested areas with the region of interest 
 ## using the central great plains as the reference areas 
 cgp <- ecos[ecos$US_L3NAME == "Central Great Plains", ]
 # area files 
-areaFiles <- list.files(path = "data/derived/areaCounts/EPA_Level3",
-                        full.names = TRUE)
+
 cpgFiles <- areaFiles[grepl(pattern = "Central Great Plains", x = areaFiles)] |>
   readr::read_csv()
 
@@ -433,148 +442,4 @@ for(i in 1:3){
   }
   results[i,2] <- round(mean(result))
 }
-
-
-
-
-
-
-
-# original Effort ---------------------------------------------------------
-
-
-
-
-
-
-samplePoints <- function(aoi, nSamples, random){
-  # condition for sampling techinic 
-  if(isTRUE(random)){
-    method = "random"
-  }else{
-    method = "regular"
-  }
-  
-  p1 <- terra::spatSample(x = aoi, 
-                    method = method, 
-                    size = nSamples)
-}
-
-
-p1 <- samplePoints(
-  aoi = ecos[2, ],
-  nSamples = 50,
-  random = FALSE
-)
-
-terra::plot(ecos[2,])
-terra::plot(p1, add=TRUE)
-
-
-## get a plot that show the results of the techniques 
-aoi <- ecos[2,]
-gridArea <- g10
-nSamples <- 100 
-random <- FALSE
-
-# adjust this function so I can assign a proprotion sample size that attached to the obje
-
-
-sampleGrids <- function(aoi, nSamples, random, gridArea){
-  # crop and mask sub grid to the aoi 
-  a1 <- gridArea |>
-    terra::crop(aoi) 
-  # sample 
-  p1 <- samplePoints(aoi = a1, 
-                     nSamples = nSamples,
-                     random = random)
-  # get grid ID 
-  return(p1)
-}
-
-# stratified random sample  -----------------------------------------------
-points <- sampleGrids(
-  aoi = aoi,
-  nSamples = 100,
-  random = TRUE,
-  gridArea = gridArea
-)
-# get the forest count information 
-files <- list.files(path = "data/derived/areaCounts/EPA_Level3",
-                    pattern = ".csv",
-                    full.names = TRUE)
-## select features with name from aoi object 
-aoiID <- aoi$US_L3NAME[1]
-feats <- files[grepl(pattern = aoiID, x = files)]
-## read in features to single dataframe
-df <- readr::read_csv(feats)
-
-## propotional assing sample 
-
-# Calculate proportions
-df <- df %>%
-  mutate(total_2010 = sum(cells2010)) %>%
-  mutate(proportion2010 = cells2010 / total_2010)|>
-  mutate(count2010 = round(250 * proportion2010),0)
-
-# sample points per grid base on the count 
-df2 <- df[df$count2010 >0, ] |>
-  dplyr::select("Unique_ID", "cells2010", "total_2010","proportion2010", "count2010")
-View(df2)
-
-df3 <- df2[,c("Unique_ID","count2010")]
-
-aoi <- ecos[2,]
-gridArea <- g10 |>
-  terra::crop(aoi)
-
-gsf <- sf::st_as_sf(gridArea)
-
-for(i in 1:nrow(df2)){
-  # select spatial object from side ID 
-  g1 <- gridArea[gridArea$Unique_ID == df2$Unique_ID[i], ]
-  
-  d1 <- samplePoints(aoi = g1, 
-               nSamples = df2$count2010[i],
-               random = TRUE)
-  if(i == 1){
-    d2 <- d1
-  }else{
-    d2 <- rbind(d2,d1)
-  }
-}
-# bind data to sf object 
-gs <- terra::merge(x = gridArea, y = df2, by = "Unique_ID")
-
-terra::plot(gridArea)
-terra::plot(d2, add = TRUE)
-# Extract the model grids  ------------------------------------------------
-
-
-
-
-samplePointsMaps <- function(aoi, nSamples, random, gridArea, year){
-  # crop and mask sub grid to the aoi 
-  a1 <- gridArea |>
-    terra::crop(aoi) 
-  a1$weight <- 
-    # sample 
-    p1 <- samplePoints(aoi = a1, 
-                       nSamples = nSamples,
-                       random = random,
-    )
-  # plot results 
-  terra::plot(a1)
-  terra::plot(p1, add=TRUE,
-              main = paste0("Random: ", random,
-                            " N Sample: ", nSamples))
-}
-
-# Sampling on a the 12mile grid  ------------------------------------------
-samplePointsMaps(aoi = aoi,
-                nSamples = 100, 
-                random = FALSE,
-                gridArea = gridArea,
-                year = NA)
-
 

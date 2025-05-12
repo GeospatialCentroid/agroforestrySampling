@@ -181,6 +181,8 @@ results2 <- dplyr::bind_rows(results,total_row) |>
     standardDev = sd(c(cells2010,cells2016,cells2020), na.rm = TRUE),
     coVariation = (standardDev/mean)*100
   )
+# export 
+readr::write_csv(results2, "data/derived/areaCounts/fullState/summaryAreaMeasures.csv")
 
 # #issue with mutliple features having the same values 
  issues <- as.data.frame(results2) |>
