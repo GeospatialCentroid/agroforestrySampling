@@ -181,3 +181,102 @@ runRandomSample <- function(subUnit){
   }
   return(featureStorage)
 }
+
+
+
+# run stratified sample ---------------------------------------------------
+runStratifiedSample <- function(subUnit, modelGrids){
+  # storage element 
+  featureStorage <- data.frame(
+    area = as.data.frame(subUnit$subRegion)[, columnID],
+    totalGrids = nrow(subUnit$areaVals),
+    sampleN_2010 = NA,
+    sampleN_2016 = NA,
+    sampleN_2020 = NA
+  )
+  print(featureStorage$area)
+  
+  # loop over years 
+  ## 80% caputre rate with 20 unique random draws 
+  for(year in c(2010,2016,2020)){
+    allVals <- subUnit$areaVals
+    if(year == 2010){
+      vals <- allVals[,c("Unique_ID", "newArea", "cells2010")]
+      thres <- subUnit$total10
+      # select the spatial object 
+      modelGrid <- getGrids(year = "2010")
+      
+    }
+    if(year == 2016){
+      vals <- allVals[,c("Unique_ID","newArea", "cells2016")]
+      thres <- subUnit$total16
+      # select the spatial object 
+      modelGrid <- getGrids(year = "2016")
+    }
+    if(year == 2020){
+      vals <- allVals[,c("Unique_ID","newArea", "cells2020")]
+      thres <- subUnit$total20
+      # select the spatial object 
+      modelGrid <- getGrids(year = "2020")
+
+    }
+    # filter model grids 
+    includedGrids <- allVals$Unique_ID
+    modelGrids <- terra::subset(modelGrid,modelGrid$Unique_ID %in% includedGrids)
+    
+    # set threshold 
+    low <- thres -(thres *0.1)
+    high <- thres + ( thres*0.1)
+    names(vals) <- c("Unique_ID", "newArea", "cells")
+    # get the spatial object 
+    
+    for(i in 1:nrow(vals)){
+      for(j in 1:20){
+        set.seed(j)
+        # stratified sample 
+        s1 <- terra::spatSample(x = modelGrids,
+                                size = i,
+                                method = "regular") |>
+          as.data.frame()
+        
+        
+        d1 <- vals |>
+          dplyr::filter(Unique_ID %in% s1$Unique_ID )|>
+          dplyr::slice_sample(n = i)|>
+          dplyr::summarise(
+            # calculated the same method as threshold values
+            percentage = (sum(cells) /(sum(newArea) * 1000000))*100)|>
+          dplyr::mutate(
+            withinThres = case_when(
+              percentage <= high & percentage >= low ~TRUE,
+              .default = FALSE
+            )
+          )
+        if(j == 1){
+          d2 <- d1
+        }else{
+          d2 <- dplyr::bind_rows(d2, d1)
+        }
+      }
+      # filter d2 to true only values 
+      trueSamples <- d2 |> dplyr::filter(withinThres == TRUE)
+      # 80% threshold 
+      if(nrow(trueSamples) >=16){
+        print(year)
+        if(year == 2020){
+          featureStorage$sampleN_2020 <- i
+        }
+        if(year == 2016){
+          featureStorage$sampleN_2016 <- i
+        }
+        if(year == 2010){
+          featureStorage$sampleN_2010 <- i
+        }
+        break()
+      }
+    }
+  }
+  return(featureStorage)
+}
+
+

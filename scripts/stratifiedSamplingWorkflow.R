@@ -1,13 +1,10 @@
-###
-#
-### 
 
-
+  
 pacman::p_load("terra", "dplyr", "readr", "sf", "tictoc", "tmap")
 
 
 # goal 
-## want to generate a random and systematic sample of a AOI 
+## want to generate a systematic sample of a AOI 
 ## these are iterative process that will continue until 
 ## 90% of the draws at a specific number result in value within +/- 10% of the know value 
 
@@ -15,19 +12,8 @@ pacman::p_load("terra", "dplyr", "readr", "sf", "tictoc", "tmap")
 # levels of analysis 
 ## geographic stratification  (ecoregions, koppen climate, lrr, mlra)
 
-## sub units within each stratification 
-
-### randon sample 
-### systematic sample 
-
-
-# environment  ------------------------------------------------------------
-source("functions/samplingWorkflowFunctions.R")
-
-
 # default inputs  ---------------------------------------------------------
 grids <- getGrids(year = 2010)
-
 # geographic stratification -----------------------------------------------
 # based on the type gather 
 # options are eco, MLRA, LRR, Koppen
@@ -62,15 +48,15 @@ for(areaType in c("eco", "MLRA", "LRR", "Koppen")){
   ## test to see if 18 of the twenty samples fall within the range, then stop 
   
   plan(strategy = "multicore", workers = 12)
-  rand2 <- furrr::future_map(.x = subUnits, .f = runRandomSample) |>
+  rand2 <- furrr::future_map(.x = subUnits, .f = runStratifiedSample) |>
     dplyr::bind_rows()
-  write.csv(x = rand2,file =  paste0("data/derived/areaCounts/",areaType,".csv"))
+  write.csv(x = rand2,file =  paste0("data/derived/areaCounts/stratified_",areaType,".csv"))
 }
 
 
 
 
 
-  
+
 
 
