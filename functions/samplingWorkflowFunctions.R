@@ -78,7 +78,7 @@ subUnitSelection <- function(areaName, columnID, vect, files){
   subRegion <- vect[vals == areaName, ]
   # files from the subregion 
   areaVals <- files[grepl(pattern = areaName, x = files)] |>
-    readr::read_csv() |>
+    readr::read_csv()|>
     dplyr::mutate(
       percent10 = (cells2010 / (newArea * 1000000))*100,
       percent16 = (cells2016 / (newArea * 1000000))*100,
@@ -233,10 +233,12 @@ runStratifiedSample <- function(subUnit, modelGrids){
     for(i in 1:nrow(vals)){
       for(j in 1:20){
         set.seed(j)
+        
         # stratified sample 
         s1 <- terra::spatSample(x = modelGrids,
                                 size = i,
                                 method = "regular") |>
+          terra::crop(subUnit$subRegion)|>
           as.data.frame()
         
         
