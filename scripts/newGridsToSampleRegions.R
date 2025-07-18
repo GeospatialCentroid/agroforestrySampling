@@ -1,7 +1,7 @@
 # this method is going to limited to 
 pacman::p_load(dplyr, terra,sf,readr,tidyr, furrr)
 
-future::plan(strategy = "multicore", workers = 18)
+future::plan(strategy = "multicore", workers = 12)
 # for each region 
 ## for each sub region 
 ## intersect all 12mile model grids 
@@ -51,19 +51,21 @@ summarizeSubAreas <- function(index,g12,g10,cots,name){
     for(unit in 1:nrow(subAreas)){
       u1 <- subAreas[unit, 1:11]
       exportPath2 <- paste0("data/derived/areaCounts/10k/pixels_",u1$ID,"_",name,".csv")
-      if(!file.exist(exportPath2)){
+      if(!file.exists(exportPath2)){
         #crop and mask 
-        r2 <- terra::crop(r1,u1)|>
-          terra::mask(u1)
-        # summarize 
-        vals <- terra::values(r2)|>
-          as.data.frame()|>
-          dplyr::count(ChangeOverTime, name = "counts")|>
-          dplyr::filter(!is.nan(ChangeOverTime))|>
-          tidyr::pivot_wider(names_from = ChangeOverTime, values_from = counts)
-        u1[,3:11] <- vals[1,]
-        # export path 
-        write_csv(x = as.data.frame(u1), file = exportPath2)
+        r2 <- try(terra::crop(r1,u1))
+        if(class(r2)!="try-error"){
+          r2 <- terra::mask(r2, u1)
+          # summarize 
+          vals <- terra::values(r2)|>
+            as.data.frame()|>
+            dplyr::count(ChangeOverTime, name = "counts")|>
+            dplyr::filter(!is.nan(ChangeOverTime))|>
+            tidyr::pivot_wider(names_from = ChangeOverTime, values_from = counts)
+          u1[,3:11] <- vals[1,]
+          # export path 
+          write_csv(x = as.data.frame(u1), file = exportPath2)
+        }
       }
     }
   }
@@ -122,34 +124,36 @@ for(region in list(eco,mlra, lrr, koppen)){
                       name = name)
     
     
-    
+    ### for loop for troubleshooting 
     # summarizeSubAreas(g12 = g12, index = index, g10 = g10, cots = cots,name = name)
     # for(j in 1:nrow(g12) ){ # nrow(g12)
     #   g1 <- g12[j,]
     #   print(paste0(j," out of ", nrow(g12)))
-    #   # name 
+    #   # name
     #   name <- g1$Unique_ID
-    #   # intersect 
+    #   # intersect
     #   subAreas <- terra::intersect(g10, g1)
-    #   # read in raster object 
+    #   # read in raster object
     #   r1 <- cots[grepl(pattern = paste0(name,"_change"), x = cots)] |> terra::rast()
     #   r1 <- r1$ChangeOverTime
     #   if(nrow(subAreas)>0){
     #     for(unit in 1:nrow(subAreas)){
     #       u1 <- subAreas[unit, 1:11]
-    #       #crop and mask 
-    #       r2 <- terra::crop(r1,u1)|>
-    #         terra::mask(u1)
-    #       # summarize 
-    #       vals <- terra::values(r2)|>
-    #         as.data.frame()|>
-    #         dplyr::count(ChangeOverTime, name = "counts")|>
-    #         dplyr::filter(!is.nan(ChangeOverTime))|>
-    #         tidyr::pivot_wider(names_from = ChangeOverTime, values_from = counts)
-    #       u1[,3:11] <- vals[1,]
-    #       # export path 
-    #       exportPath2 <- paste0("data/derived/areaCounts/10k/pixels_",u1$ID,"_",name,".csv")
-    #       write_csv(x = as.data.frame(u1), file = exportPath2)      
+    #       #crop and mask
+    #       r2 <- try(terra::crop(r1,u1))
+    #       if(class(r2)!="try-error"){
+    #         r2 <- terra::mask(r2, u1)
+    #         # summarize
+    #         vals <- terra::values(r2)|>
+    #           as.data.frame()|>
+    #           dplyr::count(ChangeOverTime, name = "counts")|>
+    #           dplyr::filter(!is.nan(ChangeOverTime))|>
+    #           tidyr::pivot_wider(names_from = ChangeOverTime, values_from = counts)
+    #         u1[,3:11] <- vals[1,]
+    #         # export path
+    #         exportPath2 <- paste0("data/derived/areaCounts/10k/pixels_",u1$ID,"_",name,".csv")
+    #         write_csv(x = as.data.frame(u1), file = exportPath2)
+    #       }
     #     }
     #   }
     # }
