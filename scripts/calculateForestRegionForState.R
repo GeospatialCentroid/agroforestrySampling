@@ -82,6 +82,9 @@ g2 <- as.data.frame(g1) |>
 d2 <- read_csv("data/derived/areaCounts/fullState/summaryAllGrids_areakm.csv")|>
   dplyr::left_join(g2, by = c("layer" = "Unique_ID" )) |>
   dplyr::select(-totalArea)
+# get area measures of grid file 
+write_csv(d2, "data/derived/areaCounts/fullState/summaryAllGrids_areakm.csv")
+
 
 # 
 # fullStateArea <- function(file){
