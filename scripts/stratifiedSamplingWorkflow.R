@@ -1,7 +1,7 @@
 
   
 pacman::p_load("terra", "dplyr", "readr", "sf", "tictoc", "tmap")
-
+tmap_mode("view")
 source("functions/samplingWorkflowFunctions.R")
 # goal 
 ## want to generate a systematic sample of a AOI 
@@ -9,251 +9,112 @@ source("functions/samplingWorkflowFunctions.R")
 ## 90% of the draws at a specific number result in value within +/- 10% of the know value 
 
 
-# levels of analysis 
-## geographic stratification  (ecoregions, koppen climate, lrr, mlra)
+# functions --------------------------------------------------------------
+## grids are ordered from bottom left - across and the back to bottom left and up
+# sample selection  ------------------------------------------------------- 
+stratifiedSelection <- function(grids, sampleNumber, seed = 1234){
+  # get total number of grids 
+  total <- nrow(grids)
+  ids <- grids$ID
+  # generate a random id selection
+  start <- ids[sample(1:total, 1)]
 
-# default inputs  ---------------------------------------------------------
-## 12m grids 
-grids <- getGrids(gridSize = 10)
-grid12 <- getGrids(gridSize = 12)
-
-# Gather and Summarize area data -----------------------------------------------
-data10k <- get10kCSVs()
-
-runStratified <- function(areaType, data10k){
-  print(areaType)
-  # get spatial file 
-  area <- getSpatialFiles(area = areaType)
-  # filter tot area type 
-  areaData <- data10k[grepl(pattern = areaType, x = data10k)]
-  # set subregions 
-  id <- getSubRegionName(areaType)
-  allNames <- unique(area[,id]) |> as.data.frame() |> pull()
-  # Gather complete stats for area 
-  for(i in allNames){
-    print(i)
-    exportPath <- paste0("data/products/areaSummaries/10k/percentArea_",areaType,
-                         "_",i,".csv" )
-    if(!file.exists(exportPath)){
-      print(i)
-      results <- percentAreas(name = i, areaData = areaData)
-      write_csv(results,exportPath)
-    }else{
-      results <- read_csv(exportPath)
+  # if sampleNumber > 1, select additional points 
+  if(sampleNumber > 1){
+    # how far apart should samples be
+    interval <- floor(total/sampleNumber)
+    # develop a vector based on random start and interval 
+    sel <- seq(from= start, by = interval, length.out = sampleNumber)
+    # storage element 
+    selected <- c()
+    # generate the index based on the Malto function 
+    for(i in 1:length(sel)){
+      selected[i] <- sel[i] %% total
     }
-    exportPath2 <- paste0("data/derived/areaCounts/stratified10k_",areaType,"_",i,".csv")
-    if(!file.exists(exportPath2)){
-      if(nrow(results)>0){
-        ssResults <- try(stratSample(areaType = areaType, i = i, results = results))
-        if(class(ssResults) != "try-error"){
-          write.csv(x = ssResults,file = exportPath2)  
-        }
-      }
-    }
+  }else{
+    # return the singular value 
+    selected <- ids
   }
-  # #compile inputs
-  # files <- list.files("data/derived/areaCounts",
-  #                     pattern = "10k",
-  #                     full.names = TRUE)
-  # # filter to region 
-  # f2 <- files[grepl(files, pattern = paste0("stratified10k_", areaType))] |>
-  #   read_csv()
-  # # export 
-  # write_csv("data/derived/areaCounts/stratified_10k_",areaType,"all.csv")
+  return(selected)
 }
 
+# Prep grids  -------------------------------------------------------------
+prepGrids <- function(grids, subGeo){
+  # crop to subgrid 
+  g1 <- terra::crop(grids, subGeo)
+  # reassign id  
+  g1$sampleID <- 1:nrow(g1)
+  # decide areas 
+  g1$areas <- as.numeric(terra::expanse(x = grids, unit = "km"))
+  totalArea <- sum(g1$areas)
+  g1$totalAreaOverIndividualArea <- totalArea/g1$areas
+  g1$individualAreaOverTotalArea <- g1$areas/totalArea
+  
+  # return the values 
+  return(g1)
+}
 
-runStratified(areaType = "MLRA", data10k = data10k)
-# 
-# # for(areaType in c( "MLRA", "LRR", "koppen","ECO")){
-#   print(areaType)
-#   # get spatial file 
-#   area <- getSpatialFiles(area = areaType)
-#   # filter tot area type 
-#   areaData <- data10k[grepl(pattern = areaType, x = data10k)]
-#   # set subregions 
-#   id <- getSubRegionName(areaType)
-#   allNames <- unique(area[,id]) |> as.data.frame() |> pull()
-#   # Gather complete stats for area 
-#   for(i in allNames){
-#     print(i)
-#     exportPath <- paste0("data/products/areaSummaries/10k/percentArea_",areaType,
-#                          "_",i,".csv" )
-#     if(!file.exists(exportPath)){
-#       print(i)
-#       results <- percentAreas(name = i, areaData = areaData)
-#       write_csv(results,exportPath)
-#     }else{
-#       results <- read_csv(exportPath)
-#     }
-#     exportPath2 <- paste0("data/derived/areaCounts/stratified10k_",areaType,"_",i,".csv")
-#     if(!file.exists(exportPath2)){
-#       if(nrow(results)>0){
-#         ssResults <- stratSample(areaType = areaType, i = i, results = results)
-#         write.csv(x = ssResults,file = exportPath2)
-#       }
-#     }
-#   }
-#   #compile inputs
-#   files <- list.files("data/derived/areaCounts",
-#                       pattern = "10k",
-#                       full.names = TRUE)
-#   # filter to region 
-#   f2 <- files[grepl(files, pattern = paste0("stratified10k_", areaType))] |>
-#     read_csv()
-#   # 
-#   
-# } 
+pullAreaFiles <- function(featName, size){
+  files <- list.files(paste0("data/products/areaSummaries/",size),
+                      full.names = TRUE)
+  # index from name 
+  areas <- files[grepl(pattern = featName, files)]
+  # spatial objects 
+  files2 <- list.files("data/derived/spatialFiles", 
+                       full.names = TRUE)
+  s1 <- terra::vect(files2[grepl(pattern = featName, 
+                                 x = files2, 
+                                 ignore.case = TRUE)])
+  # get subgrid ID 
+  columnID <- getSubRegionName(featName)
+  return(
+    list(
+      areaSummaries = areas,
+      spatial = s1,
+      name = featName,
+      columnID = columnID
+    )
+  )
+}
+
+# stratified workflow  ----------------------------------------------------
+grids <- getGrids(gridSize = 10)
+mlra <- terra::vect("data/derived/spatialFiles/CONUS_MLRA_52_dissolved.gpkg")
+featName <- "MLRA"
+size <- "10k"
 
 
+# Get names for indexing area files 
+files <- pullAreaFiles(featName = featName, size = size)
+# sort 
+areaData <- files$areaSummaries
+s1 <- files$spatial
+name <- files$name
+subGeo <- s1[3,]
+# get subgrid id 
 
-# generate the stratified sample  -----------------------------------------
-# run stratified sample ---------------------------------------------------
-# 
-# runStratifiedSample <- function(subUnit, modelGrids){
-#   # storage element 
-#   featureStorage <- data.frame(
-#     area = as.data.frame(subUnit$subRegion)[, columnID],
-#     totalGrids = nrow(subUnit$areaVals),
-#     sampleN_2010 = NA,
-#     sampleN_2016 = NA,
-#     sampleN_2020 = NA
-#   )
-#   print(featureStorage$area)
-#   
-#   # loop over years 
-#   ## 80% caputre rate with 20 unique random draws 
-#   for(year in c(2010,2016,2020)){
-#     allVals <- subUnit$areaVals
-#     if(year == 2010){
-#       vals <- allVals[,c("Unique_ID", "newArea", "cells2010")]
-#       thres <- subUnit$total10
-#       # select the spatial object 
-#       modelGrid <- getGrids(year = "2010")
-#       
-#     }
-#     if(year == 2016){
-#       vals <- allVals[,c("Unique_ID","newArea", "cells2016")]
-#       thres <- subUnit$total16
-#       # select the spatial object 
-#       modelGrid <- getGrids(year = "2016")
-#     }
-#     if(year == 2020){
-#       vals <- allVals[,c("Unique_ID","newArea", "cells2020")]
-#       thres <- subUnit$total20
-#       # select the spatial object 
-#       modelGrid <- getGrids(year = "2020")
-#       
-#     }
-#     # filter model grids 
-#     includedGrids <- allVals$Unique_ID
-#     modelGrids <- terra::subset(modelGrid,modelGrid$Unique_ID %in% includedGrids)
-#     
-#     # set threshold 
-#     low <- thres -(thres *0.1)
-#     high <- thres + ( thres*0.1)
-#     names(vals) <- c("Unique_ID", "newArea", "cells")
-#     # get the spatial object 
-#     
-#     for(i in 1:nrow(vals)){
-#       for(j in 1:20){
-#         set.seed(j)
-#         
-#         # stratified sample 
-#         s1 <- terra::spatSample(x = modelGrids,
-#                                 size = i,
-#                                 method = "regular") |>
-#           terra::crop(subUnit$subRegion)|>
-#           as.data.frame()
-#         
-#         
-#         d1 <- vals |>
-#           dplyr::filter(Unique_ID %in% s1$Unique_ID )|>
-#           dplyr::slice_sample(n = i)|>
-#           dplyr::summarise(
-#             # calculated the same method as threshold values
-#             percentage = (sum(cells) /(sum(newArea) * 1000000))*100)|>
-#           dplyr::mutate(
-#             withinThres = case_when(
-#               percentage <= high & percentage >= low ~TRUE,
-#               .default = FALSE
-#             )
-#           )
-#         if(j == 1){
-#           d2 <- d1
-#         }else{
-#           d2 <- dplyr::bind_rows(d2, d1)
-#         }
-#       }
-#       # filter d2 to true only values 
-#       trueSamples <- d2 |> dplyr::filter(withinThres == TRUE)
-#       # 80% threshold 
-#       if(nrow(trueSamples) >=16){
-#         print(year)
-#         if(year == 2020){
-#           featureStorage$sampleN_2020 <- i
-#         }
-#         if(year == 2016){
-#           featureStorage$sampleN_2016 <- i
-#         }
-#         if(year == 2010){
-#           featureStorage$sampleN_2010 <- i
-#         }
-#         break()
-#       }
-#     }
-#   }
-#   return(featureStorage)
-# }
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# # 12m workflow ------------------------------------------------------------
-# 
-# 
-# for(areaType in c("eco", "MLRA", "LRR", "Koppen")){
-#   # pull area specific info 
-#   geoPaths <- getGeographicAreas(areaType = areaType)
-#   columnID <- geoPaths$columnID
-#   
-#   vect <- geoPaths$vect |> terra::vect() |> terra::aggregate(by = columnID)
-#   files <- geoPaths$files
-#   allNames <- unique(vect[,columnID]) |>
-#     as.data.frame() |> 
-#     pull()
-#   
-#   ## sub units within each stratification 
-#   subUnits <- purrr::map(.x = allNames, 
-#                          .f = subUnitSelection,
-#                          columnID = columnID,
-#                          vect = vect,
-#                          files = files)
-#   
-#   
-#   
-#   
-#   # Run Random Sampling  ----------------------------------------------------
-#   ## for each year 
-#   ## set threshold range 
-#   ## sample N values and average results 
-#   ## repeat 20 times 
-#   ## test to see if 18 of the twenty samples fall within the range, then stop 
-#   
-#   plan(strategy = "multicore", workers = 12)
-#   rand2 <- furrr::future_map(.x = subUnits, .f = runStratifiedSample) |>
-#     dplyr::bind_rows()
-#   write.csv(x = rand2,file =  paste0("data/derived/areaCounts/stratified_",areaType,".csv"))
-# }
-# 
-# 
-# 
-# 
-# 
+index <- 3
 
+runStratified <- function(index,grids,files){
+  # unpack files object 
+  areaData <- files$areaSummaries
+  spatial <- files$spatial
+  name <- files$name
+  columnID <- files$columnID
+  # select sub geo 
+  subGeo <- spatial[index,] 
+  # define subgeoid 
+  subGeoID <- as.data.frame(subGeo)[,columnID]
+  # select area files 
+  d1 <- areaData[grepl(pattern = subGeoID, x = areaData) ]  |>
+    readr::read_csv() 
+  # Total area 
+  totalArea <-
+  
+  # process grids 
+  g1 <- prepGrids(grids = grids, subGeo = subGeo)
+   
+  
+}
 
 
