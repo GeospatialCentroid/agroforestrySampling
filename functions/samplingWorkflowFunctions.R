@@ -72,6 +72,38 @@ getSubRegionName <- function(area){
   return(columnID)
 }
 
+
+
+percentArea <- function(areaData){
+  # filter csvs and generate summary measures 
+  d1 <- areaData 
+  if(length(d1)> 0){
+    d1 <- d1 |>
+      read_csv() 
+    # group data so there is only one measure per unique ID 
+    d2 <- d1 |>
+      group_by(ID) |>
+      summarise(across(where(is.numeric), ~sum(., na.rm = TRUE)))|>
+      dplyr::select(-NA.)
+    # sumarize counts 
+    d3 <- d2 |>
+      rowwise() |>
+      dplyr::mutate(
+        cells2010 = sum(c_across(c(X1,X4,X6,X9)),na.rm=TRUE),
+        cells2016 = sum(c_across(c(X3,X4,X8,X9)),na.rm=TRUE),
+        cells2020 = sum(c_across(c(X5,X6,X8,X9)),na.rm=TRUE),
+        totalCells = sum(c_across(X0:X9),na.rm=TRUE),
+        percent10 = (cells2010 / totalCells)*100,
+        percent16 = (cells2016 / totalCells)*100,
+        percent20 = (cells2020 / totalCells)*100
+      ) 
+  }else{
+    d3 <- data.frame(matrix(nrow = 0, ncol = 11))
+    names(d3) <- c("ID","modelGrid","X0","X1","X3","X4","X5","X6","X8","X9","NA.") 
+  }
+  return(d3)
+}
+
 percentAreas <- function(name,areaData){
   # filter csvs and generate summary measures 
   d1 <- areaData[grepl(pattern = name, x = areaData)] 
@@ -100,8 +132,10 @@ percentAreas <- function(name,areaData){
     names(d3) <- c("ID","modelGrid","X0","X1","X3","X4","X5","X6","X8","X9","NA.") 
   }
   return(d3)
-  
 }
+
+
+
 stratSample <- function(areaType, i ,results){
   # run startified sample 
   # storage element 

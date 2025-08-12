@@ -15,9 +15,9 @@ source("functions/samplingWorkflowFunctions.R")
 stratifiedSelection <- function(grids, sampleNumber, seed = 1234){
   # get total number of grids 
   total <- nrow(grids)
-  ids <- grids$ID
+  ids <- grids$sampleID
   # generate a random id selection
-  start <- ids[sample(1:total, 1)]
+  start <- 20 #ids[sample(1:total, 1)]
 
   # if sampleNumber > 1, select additional points 
   if(sampleNumber > 1){
@@ -33,7 +33,7 @@ stratifiedSelection <- function(grids, sampleNumber, seed = 1234){
     }
   }else{
     # return the singular value 
-    selected <- ids
+    selected <- start
   }
   return(selected)
 }
@@ -90,10 +90,11 @@ files <- pullAreaFiles(featName = featName, size = size)
 areaData <- files$areaSummaries
 s1 <- files$spatial
 name <- files$name
-subGeo <- s1[3,]
+subGeo <- s1[4,]
 # get subgrid id 
 
-index <- 3
+index <- 2
+
 
 runStratified <- function(index,grids,files){
   # unpack files object 
@@ -108,13 +109,16 @@ runStratified <- function(index,grids,files){
   # select area files 
   d1 <- areaData[grepl(pattern = subGeoID, x = areaData) ]  |>
     readr::read_csv() 
-  # Total area 
-  totalArea <-
   
   # process grids 
   g1 <- prepGrids(grids = grids, subGeo = subGeo)
-   
   
+  # test sample 
+  sample <- g1[stratifiedSelection(grids = g1, sampleNumber = 5), ]
+  sample$areas <- terra::expanse(sample, unit = "km")
+  terra::plot(subGeo)   
+  terra::plot(g1, add = TRUE )
+  terra::plot(sample, add = TRUE, col = "blue")
 }
 
 
