@@ -45,7 +45,7 @@ prepGrids <- function(grids, subGeo){
   # reassign id  
   g1$sampleID <- 1:nrow(g1)
   # decide areas 
-  g1$areas <- as.numeric(terra::expanse(x = grids, unit = "km"))
+  g1$areas <- as.numeric(terra::expanse(x = g1, unit = "km"))
   totalArea <- sum(g1$areas)
   g1$totalAreaOverIndividualArea <- totalArea/g1$areas
   g1$individualAreaOverTotalArea <- g1$areas/totalArea
@@ -90,7 +90,7 @@ files <- pullAreaFiles(featName = featName, size = size)
 areaData <- files$areaSummaries
 s1 <- files$spatial
 name <- files$name
-subGeo <- s1[4,]
+# subGeo <- s1[4,]
 # get subgrid id 
 
 index <- 2
@@ -119,6 +119,34 @@ runStratified <- function(index,grids,files){
   terra::plot(subGeo)   
   terra::plot(g1, add = TRUE )
   terra::plot(sample, add = TRUE, col = "blue")
+  # return(sample)
+  
+  # area of the full object
+  totalArea <- sum(g1$areas)
+  # area of the sample 
+  sampleArea <- sum(sample$areas)
+  # whole area weight 
+  wholeAreaWeight <- totalArea/ sampleArea
+  # average sample area   
+  averageAreaSample <- sampleArea/nrow(sample)
+  
+  # for each sample 
+  ## run a mutate to determine the proportional value area/ average area * average weight * total area 
+  s2 <- sample |>
+    as.data.frame() |> 
+    dplyr::select(-totalAreaOverIndividualArea, -individualAreaOverTotalArea)|>
+    dplyr::mutate(
+      averageArea = averageAreaSample, 
+      wholeAreaWeight = wholeAreaWeight,
+      proportionalWeight = areas / averageAreaSample,
+      measuredWeight = proportionalWeight *averageAreaSample * wholeAreaWeight
+    )
+  # Select files of interest from sample 
+  tofData <- d1 |> 
+    dplyr::filter(ID %in% s2$ID) |> 
+    dplyr::select("ID","cells2010","cells2016","cells2020", "totalCells","percent10","percent16","percent20")
+  
 }
 
 
+sampledArea <- runStratified(index = 2, grids = grids, spatial = subGeo, files = files)
