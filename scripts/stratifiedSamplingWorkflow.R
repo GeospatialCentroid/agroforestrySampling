@@ -121,14 +121,36 @@ runStratified <- function(index,grids,files){
   terra::plot(sample, add = TRUE, col = "blue")
   # return(sample)
   
+  # select the TOF for specific sample grids 
+  d2 <- d1 |> 
+    dplyr::filter(ID %in% sample$ID)|>
+    dplyr::select("ID","percent10","percent16","percent20")|>
+    dplyr::mutate("percent10" = percent10/100,
+                  "percent16" = percent16/100,
+                  "percent20" = percent20/100)
+  # drop the spatial data and join the percent measures 
+  s1 <- as.data.frame(sample) |>
+    dplyr::left_join(d2, by ="ID") |>
+    dplyr::select(-totalAreaOverIndividualArea, -individualAreaOverTotalArea)
+  
   # area of the full object
   totalArea <- sum(g1$areas)
   # area of the sample 
-  sampleArea <- sum(sample$areas)
+  sampleArea <- sum(s1$areas)
+  # average sampled area
+  sampleAreaAverage <- sampleArea / nrow(s1)
   # whole area weight 
-  wholeAreaWeight <- totalArea/ sampleArea
-  # average sample area   
-  averageAreaSample <- sampleArea/nrow(sample)
+  fullAreaWeight <- totalArea/sampleArea
+
+  # calculate out the TOF pre year 
+  s2 <- s1 |>
+    dplyr::mutate(
+      sampleAreaProportion = areas / sampleAreaAverage,
+      measuredWeight = sampleAreaProportion * sampleAreaAverage * fullAreaWeight,
+      weightedTOF_10 = measuredWeight * percent10,
+      weightedTOF_16 = measuredWeight * percent16,
+      weightedTOF_20 = measuredWeight * percent20
+    )
   
   # for each sample 
   ## run a mutate to determine the proportional value area/ average area * average weight * total area 
@@ -136,16 +158,44 @@ runStratified <- function(index,grids,files){
     as.data.frame() |> 
     dplyr::select(-totalAreaOverIndividualArea, -individualAreaOverTotalArea)|>
     dplyr::mutate(
-      averageArea = averageAreaSample, 
+      averageArea = sampleAreaAverage, 
       wholeAreaWeight = wholeAreaWeight,
-      proportionalWeight = areas / averageAreaSample,
-      measuredWeight = proportionalWeight *averageAreaSample * wholeAreaWeight
+      sampleAreaProportion = areas / sampleAreaAverage,
+      measuredWeight = sampleAreaProportion *sampleAreaAverage * fullAreaWeight
     )
-  # Select files of interest from sample 
-  tofData <- d1 |> 
-    dplyr::filter(ID %in% s2$ID) |> 
-    dplyr::select("ID","cells2010","cells2016","cells2020", "totalCells","percent10","percent16","percent20")
+  # total area check 
+  sum(s2$measuredWeight) == totalArea
   
+  
+  
+  
+  
+  ### second attempt based on gabriels notes 
+  # totalAreaOfPopulation <- sum(g1$areas)
+  # # average area of sampled locations 
+  # fullAreaAverage <- totalAreaOfPopulation/nrow(g1)
+  # #calculate the sample area 
+  # sampleArea <- sum(sample$areas)
+  # # calculate the full area weight 
+  # fullAreaWeight <- totalAreaOfPopulation/sampleArea
+  # # calculate the proportion of each sample location relative to the full area
+  # s2 <- sample |>
+  #   as.data.frame() |> 
+  #   dplyr::select(-totalAreaOverIndividualArea, -individualAreaOverTotalArea)|>
+  #   dplyr::mutate(
+  #     sampleAreaProportion = areas / fullAreaAverage,
+  #     measuredWeight = sampleAreaProportion * sampleArea * fullAreaWeight *
+  #   )
+  # 
+  # 
+  
+  # Select files of interest from sample 
+  allTOF_Data <- d1 |>
+    dplyr::filter(ID %in% g1$ID) |>
+    dplyr::select("ID","cells2010","cells2016","cells2020", "totalCells","percent10","percent16","percent20")
+  # 
+  sampleTOF_Data <- allTOF_Data |>
+    dplyr::filter(ID %in% s2$ID)
 }
 
 
