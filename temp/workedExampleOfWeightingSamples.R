@@ -35,6 +35,9 @@ weightedSample <- function(df, sampleSize){
   proFactor <- totalAreaPop / totalAreaSample
   
   # assign values 
+  ## one of the main issue I was having in the past was using the unique area data, rather than the aveAreaSample
+  ## in the calculation of the weigthed area measures 
+  ## assumign that this is not required of the TOF because were using a independent measure that is not area 
   sample <- sample |>
     dplyr::mutate(
       relativeWeight = area/aveAreaSample, 
@@ -49,13 +52,16 @@ weightedSample <- function(df, sampleSize){
   
   # check the TOF calculations 
   df$prop <- df$area / sum(df$area)
+  # this weighted mean calculation uses the % area of a specific region against the whole as the weight 
   weightMeanTOF <- weighted.mean(x = df$TOF, w = df$prop)
+  
+  # interestingly the average weighed area requires that you using the population of the denominator in the calculation 
   averageWeightedTOF <-  sum(sample$weightTOF) / nrow(df)
   print(paste("Weighted Mean TOF population:", weightMeanTOF))
   print(paste("Weighted Mean TOF sample", averageWeightedTOF))
   # exact match only when nrow sample == nrow population 
   print(weightMeanTOF == averageWeightedTOF)
-  
+
 }
 
 # with four 

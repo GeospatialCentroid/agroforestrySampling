@@ -44,11 +44,10 @@ prepGrids <- function(grids, subGeo){
   g1 <- terra::crop(grids, subGeo)
   # reassign id  
   g1$sampleID <- 1:nrow(g1)
-  # decide areas 
-  g1$areas <- as.numeric(terra::expanse(x = g1, unit = "km"))
-  totalArea <- sum(g1$areas)
-  g1$totalAreaOverIndividualArea <- totalArea/g1$areas
-  g1$individualAreaOverTotalArea <- g1$areas/totalArea
+  # assign area 
+  g1$area <- terra::expanse(g1, unit = "km")
+  # pecent area for each feature 
+  g1$propArea <- g1$area/sum(g1$area, na.rm = TRUE)
   
   # return the values 
   return(g1)
@@ -77,9 +76,21 @@ pullAreaFiles <- function(featName, size){
   )
 }
 
+# weighted area calculation 
+getWeightedTOF <- function(g1){
+  weightAreas <- data.frame(
+    year = c("2010", "2016", "2020"),
+    tof = NA
+  )
+  weightAreas[1,2] <- weighted.mean(x = g1$percent10, w = g1$propArea)
+  weightAreas[2,2] <- weighted.mean(x = g1$percent16, w = g1$propArea)
+  weightAreas[3,2] <- weighted.mean(x = g1$percent20, w = g1$propArea)
+  return(weightAreas)
+}
+
 # stratified workflow  ----------------------------------------------------
 grids <- getGrids(gridSize = 10)
-mlra <- terra::vect("data/derived/spatialFiles/CONUS_MLRA_52_dissolved.gpkg")
+# mlra <- terra::vect("data/derived/spatialFiles/CONUS_MLRA_52_dissolved.gpkg")
 featName <- "MLRA"
 size <- "10k"
 
@@ -94,6 +105,147 @@ name <- files$name
 # get subgrid id 
 
 index <- 2
+
+
+# start with the MLRA object 
+# for each area in the MLRA object 
+
+
+
+for(feat in 1:nrow(s1)){
+  print(feat)
+  # define area object 
+  spat <- s1[feat,]
+  df_spat <- as.data.frame(spat)
+  # id 
+  id <- df_spat[,"MLRA_ID"] # this is going to change depending on datasource 
+  # filter out select grids 
+  g1 <- prepGrids(grids = grids, subGeo = spat)
+  # calculate the total area 
+  totalArea <- sum(g1$area, na.rm = TRUE)
+  
+  # grab area file and filter
+  data <- areaData[grepl(pattern = id, x = areaData)] |> 
+    read_csv() |> 
+    dplyr::filter(ID %in% g1$ID)|>
+    dplyr::select(
+      "ID", "percent10", "percent16", "percent20"
+    )
+  # join to spatial object 
+  g2 <- terra::merge(x = g1, y = data, by = "ID") |>
+    as.data.frame()
+  # calculate the total weight average per year 
+  ## these are the values were trying to solve for our sampling 
+  weightedTOF <- getWeightedTOF(g2)
+  
+  # assign new values to output object 
+  # storage dataframe for output 
+  output <- data.frame(
+    id = id,
+    totalAreas = nrow(g2),
+    wTOF10 = weightedTOF$tof[1],
+    wTOF16 = weightedTOF$tof[2],
+    wTOF20 = weightedTOF$tof[3],
+    sample10 = NA,
+    sample16 = NA,
+    sample20 = NA
+  )
+  # loop over years 
+  for(year in c("2010","2016","2020")){
+    if(year == "2010"){
+      g3 <- g2 |>
+        dplyr::select(
+          "ID","sampleID","area","propArea",
+          tof = "percent10"
+        )
+      goalTOF <- weightedTOF[1, 2]
+    }
+    if(year == "2016"){
+      g3 <- g2 |>
+        dplyr::select(
+          "ID","sampleID","area","propArea",
+          tof = "percent16"
+        )
+      goalTOF <- weightedTOF[2, 2]
+    }
+    if(year == "2020"){
+      g3 <- g2 |>
+        dplyr::select(
+          "ID","sampleID","area","propArea",
+          tof = "percent20"
+        )
+      goalTOF <- weightedTOF[3, 2]
+    }
+  
+    # establish the acceptable range - changes based on year 
+    tenPercent <- goalTOF *0.1
+    low <- goalTOF - tenPercent
+    high <- goalTOF + tenPercent
+
+    # from here we do our sampling 
+    for(i in 1:nrow(g2)){
+      # itorate with random start 
+      output2 <- data.frame(nSample = rep(i, 20),
+                            averageTOF = NA)
+      for(j in 1:20){
+        set.seed(j)
+        # pull a sample 
+        sample <- sample_n(tbl = g3, size = i)
+        # total area of sample 
+        totalAreaSample <- sum(sample$area)
+        # average area of sample 
+        aveAreaSample <- totalAreaSample / nrow(sample)
+        # proportionality factor 
+        proFactor <- totalArea / totalAreaSample
+        
+        
+        # calculate the proportion weight TOF 
+        sample <- sample |>
+          dplyr::mutate(
+            relativeWeight = area/aveAreaSample, 
+            weightedArea = aveAreaSample * relativeWeight * proFactor,
+            weightTOF = tof * relativeWeight * proFactor
+          )
+        # store values  
+        output1[j, "averageTOF"] <- mean(sample$weightTOF, na.rm =TRUE)
+      }
+      # exclude any duplications in the data 
+      output2 <- distinct(output1) |>
+        dplyr::mutate(
+          inRange = case_when(
+            averageTOF >= low & averageTOF <= high ~ TRUE,
+            TRUE ~ FALSE
+          )
+        )
+      # test to see if 80% of random draws are within threshold 
+      average <- mean(output2$inRange) * 100
+      if(average >= 80){
+        if(year == "2010"){
+          output$sample10 <- i
+        }
+        if(year == "2016"){
+          output$sample16 <- i
+        }
+        if(year == "2020"){
+          output$sample20 <- i
+        }
+        next()
+      }
+    }
+  }
+  # bind data to output dataframe 
+  if(feat == 1){
+    results <- output
+  }else{
+    results <- bind_rows(results,output)
+  }
+}
+
+
+
+
+
+
 
 
 runStratified <- function(index,grids,files){
@@ -112,10 +264,91 @@ runStratified <- function(index,grids,files){
   
   # process grids 
   g1 <- prepGrids(grids = grids, subGeo = subGeo)
+  g1$area <- terra::expanse(g1, unit = "km")
   
-  # test sample 
+  
+  # runSample 
+  spat <- g1
+  nGrids <- 5
+  weightedArea <- function(spat, nGrids){
+    df <- as.data.frame(spat)
+    # total Area
+    totalArea <- sum(g1$area)
+    # generate sample 
+    sample <- sample_n(tbl = df, size = nGrids)
+    # total area of sample 
+    totalAreaSample <- sum(sample$area)
+    # average area of sample 
+    aveAreaSample <- totalAreaSample / nrow(sample)
+    # proportionality factor 
+    proFactor <- totalArea / totalAreaSample
+    # assign values 
+    sample <- sample |>
+      dplyr::mutate(
+        relativeWeight = area/aveAreaSample, 
+        weightedArea = aveAreaSample * relativeWeight * proFactor,
+        weightTOF = TOF * relativeWeight * proFactor
+      )
+  }
+  
+  # pull a sample 
+ 
+  
+ 
+  
+  # proportionality factor 
+  proFactor <- totalAreaPop / totalAreaSample
+  
+  # assign values 
+  ## one of the main issue I was having in the past was using the unique area data, rather than the aveAreaSample
+  ## in the calculation of the weigthed area measures 
+  ## assumign that this is not required of the TOF because were using a independent measure that is not area 
+  sample <- sample |>
+    dplyr::mutate(
+      relativeWeight = area/aveAreaSample, 
+      weightedArea = aveAreaSample * relativeWeight * proFactor,
+      weightTOF = TOF * relativeWeight * proFactor
+    )
+  
+  # check the area measure 
+  print(paste("Area population:", sum(df$area)))
+  print(paste("Weighted area of sample", sum(sample$weightedArea)))
+  sum(df$area) == sum(sample$weightedArea)
+  
+  # check the TOF calculations 
+  df$prop <- df$area / sum(df$area)
+  # this weighted mean calculation uses the % area of a specific region against the whole as the weight 
+  weightMeanTOF <- weighted.mean(x = df$TOF, w = df$prop)
+  
+  # interestingly the average weighed area requires that you using the population of the denominator in the calculation 
+  averageWeightedTOF <-  sum(sample$weightTOF) / nrow(df)
+  print(paste("Weighted Mean TOF population:", weightMeanTOF))
+  print(paste("Weighted Mean TOF sample", averageWeightedTOF))
+  # exact match only when nrow sample == nrow population 
+  print(weightMeanTOF == averageWeightedTOF)
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  # sample 
   sample <- g1[stratifiedSelection(grids = g1, sampleNumber = 5), ]
+  
   sample$areas <- terra::expanse(sample, unit = "km")
+  
+  
+  
   terra::plot(subGeo)   
   terra::plot(g1, add = TRUE )
   terra::plot(sample, add = TRUE, col = "blue")
