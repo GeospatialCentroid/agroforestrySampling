@@ -183,10 +183,11 @@ for(feat in 1:nrow(s1)){
     high <- goalTOF + tenPercent
 
     # from here we do our sampling 
-    for(i in 1:nrow(g2)){
+    for(i in 1:nrow(g3)){
       # itorate with random start 
       output2 <- data.frame(nSample = rep(i, 20),
-                            averageTOF = NA)
+                            averageTOF = NA,
+                            averageTOF_overpop = NA)
       for(j in 1:20){
         set.seed(j)
         # pull a sample 
@@ -207,13 +208,15 @@ for(feat in 1:nrow(s1)){
             weightTOF = tof * relativeWeight * proFactor
           )
         # store values  
-        output1[j, "averageTOF"] <- mean(sample$weightTOF, na.rm =TRUE)
+        output2[j, "averageTOF"] <- mean(sample$weightTOF, na.rm =TRUE)
+        output2[j, "averageTOF_overpop"] <- sum(sample$weightTOF, na.rm =TRUE)/output$totalAreas
+        
       }
       # exclude any duplications in the data 
-      output2 <- distinct(output1) |>
+      output2 <- distinct(output2) |>
         dplyr::mutate(
           inRange = case_when(
-            averageTOF >= low & averageTOF <= high ~ TRUE,
+            averageTOF_overpop >= low & averageTOF_overpop <= high ~ TRUE,
             TRUE ~ FALSE
           )
         )

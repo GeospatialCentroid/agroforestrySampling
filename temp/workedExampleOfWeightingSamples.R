@@ -13,9 +13,12 @@ df4 <- data.frame(
 df20 <- data.frame(
   ID = 1:20, 
   area = runif(20, min = 10, max = 40),
-  TOF = runif(4, min = 0.02, max = 0.50)
+  TOF = runif(20, min = 0.02, max = 0.50)
 )
 
+# testing
+df <- df4
+sampleSize <- 2
 
 weightedSample <- function(df, sampleSize){ 
   
@@ -31,8 +34,12 @@ weightedSample <- function(df, sampleSize){
   # average area of sample 
   aveAreaSample <- totalAreaSample / nrow(sample)
   
-  # proportionality factor 
+  # proportionality factor -- area 
   proFactor <- totalAreaPop / totalAreaSample
+  # proportionality factor -- sample number 
+  proFactor <- nrow(df) / nrow(sample)
+  ### this will equal the same value
+  
   
   # assign values 
   ## one of the main issue I was having in the past was using the unique area data, rather than the aveAreaSample
@@ -42,7 +49,10 @@ weightedSample <- function(df, sampleSize){
     dplyr::mutate(
       relativeWeight = area/aveAreaSample, 
       weightedArea = aveAreaSample * relativeWeight * proFactor,
-      weightTOF = TOF * relativeWeight * proFactor
+      tof_2 = tof * area
+      # weightedArea2 = area * proFactor,
+      weightTOF = TOF * relativeWeight * proFactor,
+      weightTO2 = TOF * weightedArea
     )
   
   # check the area measure 
@@ -57,19 +67,22 @@ weightedSample <- function(df, sampleSize){
   
   # interestingly the average weighed area requires that you using the population of the denominator in the calculation 
   averageWeightedTOF <-  sum(sample$weightTOF) / nrow(df)
+  averageWeightedTOF_sample <- weighted.mean(x = df$TOF, w = df$area)
   print(paste("Weighted Mean TOF population:", weightMeanTOF))
   print(paste("Weighted Mean TOF sample", averageWeightedTOF))
+  print(paste("Weighted Mean TOF example", averageWeightedTOF_sample))
+  
   # exact match only when nrow sample == nrow population 
   print(weightMeanTOF == averageWeightedTOF)
-
+  return(sample)
 }
 
 # with four 
-weightedSample(df = df4, sampleSize = 4)
+out1 <- weightedSample(df = df4, sampleSize = 2)
 
 # with 20 
-weightedSample(df = df20, sampleSize = 8)
-
-
+out2 <- weightedSample(df = df20, sampleSize = 8)
+mean(out2$weightTOF)
+weighted.mean(df20$TOF)
 
 
