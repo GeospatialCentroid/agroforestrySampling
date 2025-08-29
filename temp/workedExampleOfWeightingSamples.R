@@ -49,7 +49,7 @@ weightedSample <- function(df, sampleSize){
     dplyr::mutate(
       relativeWeight = area/aveAreaSample, 
       weightedArea = aveAreaSample * relativeWeight * proFactor,
-      tof_2 = tof * area
+      tof_2 = (tof * area)/area,
       # weightedArea2 = area * proFactor,
       weightTOF = TOF * relativeWeight * proFactor,
       weightTO2 = TOF * weightedArea

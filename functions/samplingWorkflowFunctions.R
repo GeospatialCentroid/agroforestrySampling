@@ -42,6 +42,7 @@ get10kCSVs <- function(){
   return(k10)
 }
 
+
 getSpatialFiles <- function(area){
   # spatial data 
   f1 <- list.files("data/derived/spatialFiles",
@@ -71,6 +72,7 @@ getSubRegionName <- function(area){
   }
   return(columnID)
 }
+
 
 
 
@@ -339,8 +341,6 @@ subUnitSelection <- function(areaName, columnID, vect, files){
 }
 # random sample  ----------------------------------------------------------
 ## itorative method to determine the number of locations required for a percentile match 
-
-
 runRandomSample <- function(subUnit){
   # storage element 
   featureStorage <- data.frame(
@@ -415,101 +415,257 @@ runRandomSample <- function(subUnit){
 
 
 
-# run stratified sample ---------------------------------------------------
-runStratifiedSample <- function(subUnit, modelGrids){
-  # storage element 
-  featureStorage <- data.frame(
-    area = as.data.frame(subUnit$subRegion)[, columnID],
-    totalGrids = nrow(subUnit$areaVals),
-    sampleN_2010 = NA,
-    sampleN_2016 = NA,
-    sampleN_2020 = NA
-  )
-  print(featureStorage$area)
-  
-  # loop over years 
-  ## 80% caputre rate with 20 unique random draws 
-  for(year in c(2010,2016,2020)){
-    allVals <- subUnit$areaVals
-    if(year == 2010){
-      vals <- allVals[,c("Unique_ID", "newArea", "cells2010")]
-      thres <- subUnit$total10
-      # select the spatial object 
-      modelGrid <- getGrids(year = "2010")
-      
-    }
-    if(year == 2016){
-      vals <- allVals[,c("Unique_ID","newArea", "cells2016")]
-      thres <- subUnit$total16
-      # select the spatial object 
-      modelGrid <- getGrids(year = "2016")
-    }
-    if(year == 2020){
-      vals <- allVals[,c("Unique_ID","newArea", "cells2020")]
-      thres <- subUnit$total20
-      # select the spatial object 
-      modelGrid <- getGrids(year = "2020")
+# stratified sampling functions  ------------------------------------------
 
+
+# functions --------------------------------------------------------------
+## grids are ordered from bottom left - across and the back to bottom left and up
+# sample selection  ------------------------------------------------------- 
+stratifiedSelection <- function(grids, sampleNumber, seed = 1234){
+  # get total number of grids 
+  total <- nrow(grids)
+  ids <- grids$sampleID
+  # generate a random id selection
+  start <- 20 #ids[sample(1:total, 1)]
+  
+  # if sampleNumber > 1, select additional points 
+  if(sampleNumber > 1){
+    # how far apart should samples be
+    interval <- floor(total/sampleNumber)
+    # develop a vector based on random start and interval 
+    sel <- seq(from= start, by = interval, length.out = sampleNumber)
+    # storage element 
+    selected <- c()
+    # generate the index based on the Malto function 
+    for(i in 1:length(sel)){
+      selected[i] <- sel[i] %% total
     }
-    # filter model grids 
-    includedGrids <- allVals$Unique_ID
-    modelGrids <- terra::subset(modelGrid,modelGrid$Unique_ID %in% includedGrids)
+  }else{
+    # return the singular value 
+    selected <- start
+  }
+  return(selected)
+}
+
+# Prep grids  -------------------------------------------------------------
+prepGrids <- function(grids, subGeo){
+  # crop to subgrid 
+  g1 <- terra::crop(grids, subGeo)
+  # reassign id  
+  g1$sampleID <- 1:nrow(g1)
+  # assign area 
+  g1$area <- terra::expanse(g1, unit = "km")
+  # pecent area for each feature -- not using directly 
+  # g1$propArea <- g1$area/sum(g1$area, na.rm = TRUE)
+  
+  # return the values 
+  return(g1)
+}
+
+pullAreaFiles <- function(featName, size){
+  files <- list.files(paste0("data/products/areaSummaries/",size),
+                      full.names = TRUE)
+  # index from name 
+  areas <- files[grepl(pattern = featName, files)]
+  # spatial objects 
+  files2 <- list.files("data/derived/spatialFiles", 
+                       full.names = TRUE)
+  s1 <- terra::vect(files2[grepl(pattern = featName, 
+                                 x = files2, 
+                                 ignore.case = TRUE)])
+  # get subgrid ID 
+  columnID <- getSubRegionName(featName)
+  return(
+    list(
+      areaSummaries = areas,
+      spatial = s1,
+      name = featName,
+      columnID = columnID
+    )
+  )
+}
+
+# weighted area calculation 
+getWeightedTOF <- function(g2){
+  totalAreaPop <- sum(g2$area)
+  
+  weightAreas <- data.frame(
+    year = c("2010", "2016", "2020"),
+    tofRatio = NA,
+    tofArea = NA
+  )
+  
+  # caculate ratio and area measures 
+  r10 <- weighted.mean(x = g2$percent10, w = g2$area, na.rm = TRUE)
+  a10 <- r10 * totalAreaPop
+  r16 <- weighted.mean(x = g2$percent16, w = g2$area, na.rm = TRUE)
+  a16 <- r16 * totalAreaPop
+  r20 <- weighted.mean(x = g2$percent20, w = g2$area, na.rm = TRUE)
+  a20 <- r20 * totalAreaPop
+  # assign values 
+  weightAreas$tofRatio <- c(r10,r16,r20)
+  weightAreas$tofArea <- c(a10,a16,a20)
+  # export 
+  return(weightAreas)
+}
+
+# primary stratified sample method 
+callStartitfied <- function(featName, size,proportionValue){
+  # Get names for indexing area files 
+  files <- pullAreaFiles(featName = featName, size = size)
+  # sort 
+  areaData <- files$areaSummaries
+  s1 <- files$spatial
+  name <- files$name
+  # assign generic column ID 
+  s1$genericID <- as.data.frame(s1)[,files$columnID]
+  
+  # run 
+  for(feat in 1:nrow(s1)){
+    print(feat)
+    # define area object 
+    spat <- s1[feat,]
+    df_spat <- as.data.frame(spat)
+    # id 
+    id <- df_spat[,"genericID"] # this is going to change depending on datasource 
+    # filter out select grids 
+    g1 <- prepGrids(grids = grids, subGeo = spat)
     
-    # set threshold 
-    low <- thres -(thres *0.1)
-    high <- thres + ( thres*0.1)
-    names(vals) <- c("Unique_ID", "newArea", "cells")
-    # get the spatial object 
+    # calculate the total area 
+    totalArea <- sum(g1$area, na.rm = TRUE)
     
-    for(i in 1:nrow(vals)){
-      for(j in 1:20){
-        set.seed(j)
-        
-        # stratified sample 
-        s1 <- terra::spatSample(x = modelGrids,
-                                size = i,
-                                method = "regular") |>
-          terra::crop(subUnit$subRegion)|>
-          as.data.frame()
-        
-        
-        d1 <- vals |>
-          dplyr::filter(Unique_ID %in% s1$Unique_ID )|>
-          dplyr::slice_sample(n = i)|>
-          dplyr::summarise(
-            # calculated the same method as threshold values
-            percentage = (sum(cells) /(sum(newArea) * 1000000))*100)|>
+    # grab area file and filter
+    data <- areaData[grepl(pattern = id, x = areaData)] |> 
+      read_csv() 
+    |> 
+      dplyr::filter(ID %in% g1$ID)|>
+      dplyr::select(
+        "ID", "percent10", "percent16", "percent20"
+      ) |> 
+      dplyr::mutate(
+        "percent10" = percent10/100,
+        "percent16" = percent16/100,
+        "percent20" = percent20/100
+      )
+    # join to spatial object 
+    g2 <- terra::merge(x = g1, y = data, by = "ID") |>
+      as.data.frame()
+    # calculate the total weight average per year 
+    ## these are the values were trying to solve for our sampling 
+    weightedTOF <- getWeightedTOF(g2)
+    
+    # assign new values to output object 
+    # storage dataframe for output 
+    output <- data.frame(
+      id = id,
+      totalAreas = nrow(g2),
+      wTOF10 = weightedTOF$tofArea[1],
+      wTOF16 = weightedTOF$tofArea[2],
+      wTOF20 = weightedTOF$tofArea[3],
+      sample10 = NA,
+      averageTOF10 = NA,
+      sample16 = NA,
+      averageTOF16 = NA,
+      sample20 = NA,
+      averageTOF20 = NA
+    )
+    # loop over years 
+    for(year in c("2010","2016","2020")){
+      if(year == "2010"){
+        g3 <- g2 |>
+          dplyr::select(
+            "ID","sampleID","area",
+            tof = "percent10"
+          )
+        goalTOF <- weightedTOF |> 
+          dplyr::filter(year == "2010") |>
+          pull(tofArea)
+      }
+      if(year == "2016"){
+        g3 <- g2 |>
+          dplyr::select(
+            "ID","sampleID","area",
+            tof = "percent16"
+          )
+        goalTOF <- weightedTOF |> 
+          dplyr::filter(year == "2016") |>
+          pull(tofArea)
+      }
+      if(year == "2020"){
+        g3 <- g2 |>
+          dplyr::select(
+            "ID","sampleID","area",
+            tof = "percent20"
+          )
+        goalTOF <- weightedTOF |> 
+          dplyr::filter(year == "2020") |>
+          pull(tofArea)
+      }
+      
+      # establish the acceptable range - changes based on year 
+      tenPercent <- goalTOF *0.1
+      low <- goalTOF - tenPercent
+      high <- goalTOF + tenPercent
+      
+      # from here we do our sampling 
+      for(i in 1:nrow(g3)){
+        # itorate with random start 
+        output2 <- data.frame(nSample = rep(i, 20),
+                              estimatedTOF = NA)
+        for(j in 1:20){
+          set.seed(j)
+          # pull a sample 
+          sample <- sample_n(tbl = g3, size = i)
+          # ratio estimator from the sample
+          sampleRatio <- weighted.mean(x = sample$tof, w = sample$area, na.rm = TRUE)
+          # TOF area estimate 
+          tofEstimate <- sampleRatio * totalArea
+          # store values  
+          output2[j, "estimatedTOF"] <- tofEstimate
+          
+        }
+        # exclude any duplications in the data 
+        output2 <- distinct(output2) |>
           dplyr::mutate(
-            withinThres = case_when(
-              percentage <= high & percentage >= low ~TRUE,
-              .default = FALSE
+            inRange = case_when(
+              estimatedTOF >= low & estimatedTOF <= high ~ TRUE,
+              TRUE ~ FALSE
             )
           )
-        if(j == 1){
-          d2 <- d1
-        }else{
-          d2 <- dplyr::bind_rows(d2, d1)
+        # test to see if 80% of random draws are within threshold 
+        average <- mean(output2$inRange) * 100
+        if(average >= proportionValue){
+          if(year == "2010"){
+            output$sample10 <- i
+            output$averageTOF10 <- mean(output2$estimatedTOF, na.rm = TRUE)
+          }
+          if(year == "2016"){
+            output$sample16 <- i
+            output$averageTOF16 <- mean(output2$estimatedTOF, na.rm = TRUE)
+          }
+          if(year == "2020"){
+            output$sample20 <- i
+            output$averageTOF20 <- mean(output2$estimatedTOF, na.rm = TRUE)
+          }
+          break()
         }
-      }
-      # filter d2 to true only values 
-      trueSamples <- d2 |> dplyr::filter(withinThres == TRUE)
-      # 80% threshold 
-      if(nrow(trueSamples) >=16){
-        print(year)
-        if(year == 2020){
-          featureStorage$sampleN_2020 <- i
-        }
-        if(year == 2016){
-          featureStorage$sampleN_2016 <- i
-        }
-        if(year == 2010){
-          featureStorage$sampleN_2010 <- i
-        }
-        break()
       }
     }
+    # bind data to output dataframe 
+    if(feat == 1){
+      results <- output
+    }else{
+      results <- bind_rows(results,output)
+    }
   }
-  return(featureStorage)
+  # return
+  return(results)
 }
+
+
+
+
+
+
 
 
