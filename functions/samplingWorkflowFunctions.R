@@ -190,7 +190,7 @@ stratSample <- function(areaType, i ,results){
     
     for(sampleN in Range){
       # repeat with different random seeds 
-      for(j in 1:20){
+      for(j in 1:1000){
         set.seed(j)
         # stratified sample 
         s1 <- terra::spatSample(x = selGrids,
@@ -510,7 +510,7 @@ getWeightedTOF <- function(g2){
 }
 
 # primary stratified sample method 
-callStartitfied <- function(featName, size,proportionValue){
+callStartitfied <- function(featName, size, proportionValue, iter){
   # Get names for indexing area files 
   files <- pullAreaFiles(featName = featName, size = size)
   # sort 
@@ -521,7 +521,13 @@ callStartitfied <- function(featName, size,proportionValue){
   s1$genericID <- as.data.frame(s1)[,files$columnID]
   
   # run 
-  for(feat in 1:nrow(s1)){
+  allFeats <- 1:nrow(s1)
+  if(length(allFeats) > 50){
+    features <- allFeats[(allFeats %% 5) == 0]
+  }else{
+    features <- allFeats
+  }
+  for(feat in features){
     print(feat)
     # define area object 
     spat <- s1[feat,]
@@ -536,8 +542,7 @@ callStartitfied <- function(featName, size,proportionValue){
     
     # grab area file and filter
     data <- areaData[grepl(pattern = id, x = areaData)] |> 
-      read_csv() 
-    |> 
+      read_csv() |> 
       dplyr::filter(ID %in% g1$ID)|>
       dplyr::select(
         "ID", "percent10", "percent16", "percent20"
@@ -612,7 +617,7 @@ callStartitfied <- function(featName, size,proportionValue){
         # itorate with random start 
         output2 <- data.frame(nSample = rep(i, 20),
                               estimatedTOF = NA)
-        for(j in 1:20){
+        for(j in 1:iter){
           set.seed(j)
           # pull a sample 
           sample <- sample_n(tbl = g3, size = i)
