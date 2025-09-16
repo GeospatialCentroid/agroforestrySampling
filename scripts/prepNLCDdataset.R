@@ -1,5 +1,27 @@
-pacman::p_load(terra,tigris, sf)
+pacman::p_load(terra, dplyr,sf, readr, purrr, googledrive )
 
+
+#  for the pullAreaFiles function 
+source("functions/samplingWorkflowFunctions.R")
+
+
+# inital download from google drive
+drive_auth()
+gFiles <- drive_ls(path = "temp",pattern = ".tif")
+
+for(i in 1:nrow(gFiles)){
+  print(i)
+  name <- gFiles$name[i]
+  id <- gFiles$id[i]
+  export <-  paste0("data/raw/nlcd/", name)
+  if(!file.exists(export)){
+    # download 
+    drive_download(
+      file = id,
+      path = export
+    )
+  }  
+}
 # read in template file 
 r1 <- terra::rast("data/raw/nlcd/Annual_NLCD_LndCov_2020_CU_C1V1.tif") 
 
