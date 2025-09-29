@@ -11,7 +11,9 @@ nlcdFiles <- list.files("data/derived/nlcdData",
                         all.files = TRUE)|>
   terra::rast()
 
-mlra <- TRUE 
+
+# set MLRA ----------------------------------------------------------------
+mlra <- FALSE 
 
 # working with MLRA and LRR so set some parameters based on that 
 if(isTRUE(mlra)){
@@ -229,26 +231,28 @@ if(isTRUE(mlra)){
   ag10 <-  read_csv("data/derived/samplingXTesting/aggregated/mlra80_10.csv") |> grabMeanSamples()
   ag16 <-  read_csv("data/derived/samplingXTesting/aggregated/mlra80_16.csv") |> grabMeanSamples()
   ag20 <-  read_csv("data/derived/samplingXTesting/aggregated/mlra80_20.csv") |> grabMeanSamples()
-  
+  d2 <- read_csv("data/derived/nlcdSummaryAreas/largeClass_summaryMLRA.csv")
+  area <-"mlra"
 }else{
   ## read in the aggregates data values 
   agg <- read_csv("data/derived/samplingXTesting/aggregated/lrr80_iterations.csv")
   ag10 <-  read_csv("data/derived/samplingXTesting/aggregated/lrr80_10.csv") |> grabMeanSamples()
   ag16 <-  read_csv("data/derived/samplingXTesting/aggregated/lrr80_16.csv") |> grabMeanSamples()
   ag20 <-  read_csv("data/derived/samplingXTesting/aggregated/lrr80_20.csv") |> grabMeanSamples()
-  
+  d2 <- read_csv("data/derived/nlcdSummaryAreas/largeClass_summaryLRR.csv")
+  area <-"lrr"
 }
 
 
 
-producePlots <- function(nlcdData, sampleData, year){
+producePlots <- function(nlcdData, sampleData, year, area){
   # subset to a specific year 
   df_filtered <- nlcdData |>
     filter(
       Year == year
     )
   # assign the mlra column to match nlcd data 
-  sampleData$mlra <- paste0("mlra_", sampleData$id)
+  sampleData$areaName <- paste0(area,"_",sampleData$id)
   
   # Create the interactive grouped bar chart
   fig <- plot_ly(
@@ -258,10 +262,10 @@ producePlots <- function(nlcdData, sampleData, year){
     color = ~lcGroup,
     type = 'bar',
     barmode = 'group' # This groups the bars side-by-side
-  )|>
+  )  |>
     add_trace(
       data = sampleData,
-      x = ~mlra,
+      x = ~areaName,
       y = ~average_samplePercentage, # Use the column from your new data
       type = 'scatter',
       mode = 'markers',
@@ -271,17 +275,17 @@ producePlots <- function(nlcdData, sampleData, year){
     ) |>
     layout(
       title = paste0("NLCD class areas and Sample Percentage - ", year),
-      xaxis = list(title = "MLRA", categoryorder = "category ascending"),
+      xaxis = list(title = area, categoryorder = "category ascending"),
       yaxis = list(title = "Percent Area (%)", range = c(0, 100)), # Adjust range for text
       legend = list(title = list(text = "<b> Land Cover Group </b>"))
     )
 }
 
-p10 <- producePlots(nlcdData = d2, sampleData = ag10,year = "2010")
+p10 <- producePlots(nlcdData = d2, sampleData = ag10,year = "2010" , area = area)
 p10
-p16 <- producePlots(nlcdData = d2, sampleData = ag16,year = "2016")
+p16 <- producePlots(nlcdData = d2, sampleData = ag16,year = "2016", area = area)
 p16
-p20 <- producePlots(nlcdData = d2, sampleData = ag20,year = "2020")
+p20 <- producePlots(nlcdData = d2, sampleData = ag20,year = "2020", area = area)
 p20
 
 
