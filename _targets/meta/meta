@@ -1,0 +1,8 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+rawStatesData|stem|d8c8edbf2a7cd799|6fe81de877ba562c|abc837d4e28a54d6|-686403523||t20380.7851192499s|s510118b|510118|rds|local|vector|||2.786||
+lower48Data|stem|26f515af4d4707a8|7ead1dd2fe222b93|868a8979afec0f5e|670038060||t20380.7851203172s|s358582b|358582|rds|local|vector|||0.009||
+rawStatesFile|stem|d0561774ed5cf095|2cfb86b93f0f00b8|be60b5d525367cc3|-1879208822|data/raw/us/allStates.gpkg|t20380.7851219091s|s1077248b|1077248|file|local|vector|||0.106||
+lower48File|stem|1fb132c5c98fcb19|5a5e1d1f72f68f83|4100c45e836f85cb|-1474689115|data/derived/us/lower48.gpkg|t20380.7851230865s|s1077248b|1077248|file|local|vector|||0.089||
+processLower48|function|73232dc6c39356da
+saveGeopackage|function|4fe187488f06183e
+downloadRawStates|function|1b144a2a1f60433d
