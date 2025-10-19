@@ -5,7 +5,7 @@ library(tarchetypes)
 
 # Load packages required by your functions
 tar_option_set(
-  packages = c("sf", "dplyr", "rnaturalearth")
+  packages = c("sf", "dplyr", "rnaturalearth", "tigris")
 )
 
 # Source the functions (which we will also rename)
@@ -40,5 +40,24 @@ list(
     name = lower48File,
     command = saveGeopackage(lower48Data, "data/derived/us/lower48.gpkg"),
     format = "file"
+  ),
+  # 5. Download all US counties from tigris
+  tar_target(
+    name = tigrisCountiesData, # Renamed for clarity
+    command = downloadTigrisCounties() # Changed function call
+  ),
+  
+  # 6. Filter counties to only those in the lower 48
+  tar_target(
+    name = lower48CountiesData,
+    command = filterCountiesToLower48(tigrisCountiesData, lower48Data) # Uses new tigris data
+  ),
+  
+  # 7. Save the filtered counties to a file
+  tar_target(
+    name = lower48CountiesFile,
+    command = saveGeopackage(lower48CountiesData, "data/derived/us/lower48_counties.gpkg"),
+    format = "file"
   )
+ 
 )

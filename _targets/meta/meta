@@ -1,8 +1,15 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
 rawStatesData|stem|d8c8edbf2a7cd799|6fe81de877ba562c|abc837d4e28a54d6|-686403523||t20380.7851192499s|s510118b|510118|rds|local|vector|||2.786||
-lower48Data|stem|26f515af4d4707a8|7ead1dd2fe222b93|868a8979afec0f5e|670038060||t20380.7851203172s|s358582b|358582|rds|local|vector|||0.009||
 rawStatesFile|stem|d0561774ed5cf095|2cfb86b93f0f00b8|be60b5d525367cc3|-1879208822|data/raw/us/allStates.gpkg|t20380.7851219091s|s1077248b|1077248|file|local|vector|||0.106||
 lower48File|stem|1fb132c5c98fcb19|5a5e1d1f72f68f83|4100c45e836f85cb|-1474689115|data/derived/us/lower48.gpkg|t20380.7851230865s|s1077248b|1077248|file|local|vector|||0.089||
-processLower48|function|73232dc6c39356da
+downloadUsCounties|function|230b2b82caa4ff4d
+usCountiesData|stem||0063dc2f8186f290|ad9a2ac305ec07ff|1307029934||t20380.7896696175s||0|rds|local|vector|||2.144||'ne_counties' is not an exported object from 'namespace:rnaturalearth'
+downloadTigrisCounties|function|a0f99e52f66acbac
+filterCountiesToLower48|function|2161f1eb6f4c1c64
+processLower48|function|b8f1e5dba159a1e8
 saveGeopackage|function|4fe187488f06183e
 downloadRawStates|function|1b144a2a1f60433d
+tigrisCountiesData|stem|ebe54befa10d7de0|444dc372d5253e44|c4b06de191179e18|-1091080731||t20380.7930615017s|s12229223b|12229223|rds|local|vector|||3.208||
+lower48Data|stem|26f515af4d4707a8|7ead1dd2fe222b93|6f365659eb1cb946|670038060||t20380.7930625971s|s358582b|358582|rds|local|vector|||0.01||
+lower48CountiesData|stem|52a78edc93a07b9a|f5d4c9934ea877e9|effd1cda1ed9d8df|1685153788||t20380.7930890552s|s10718643b|10718643|rds|local|vector|||1.655||
+lower48CountiesFile|stem|2deca52c5d66a24e|91505c41026dc215|451bfdfc76bb3e61|1214712293|data/derived/us/lower48_counties.gpkg|t20380.7930942874s|s22679552b|22679552|file|local|vector|||0.336||
