@@ -61,13 +61,48 @@ filterCountiesToLower48 <- function(tigrisCountiesData, lower48StatesData) {
   return(lower48Counties)
 }
 
+lower48Extent <- function(lower48){
+  # convert to terra objects
+  # vect48 <- terra::vect(lower48)
+  # convert to an bounding box 
+  extent <- sf::st_sf(geometry = sf::st_as_sfc(sf::st_bbox(lower48)))
+  
+  return(extent)
+}
+
+
+# MLRA data  --------------------------------------------------------------
+# process MLRA data 
+## format to CRS and lower 48 
+## spilt into MLRA and LRR 
+## export results 
+## url pulled from https://www.nrcs.usda.gov/resources/data-and-reports/major-land-resource-area-mlra
+# extent48 <- terra::vect(x = "data/derived/us/lower48.gpkg")
+processMLRA <- function(mlraPath, extent48){
+  mlra <- terra::vect(mlraPath) |> terra::crop(extent48)
+  return(mlra)
+}
+
+
+
+
 # A helper function to save any sf object as a .gpkg file
-saveGeopackage <- function(sfObject, outputPath) {
+saveGeopackageSF <- function(sfObject, outputPath) {
   # Ensure the directory exists
   dir.create(dirname(outputPath), recursive = TRUE, showWarnings = FALSE)
   
   # Write the file, overwriting if needed (targets controls the "if needed" part)
   sf::st_write(sfObject, dsn = outputPath, delete_layer = TRUE)
+  
+  # Return the path for {targets} to track as a file
+  return(outputPath)
+}
+saveGeopackageTerra <- function(terraObject, outputPath) {
+  # Ensure the directory exists
+  # dir.create(dirname(outputPath), recursive = TRUE, showWarnings = FALSE)
+  
+  # Write the file, overwriting if needed (targets controls the "if needed" part)
+  terra::writeVector(terraObject, outputPath, overwrite = TRUE)
   
   # Return the path for {targets} to track as a file
   return(outputPath)
