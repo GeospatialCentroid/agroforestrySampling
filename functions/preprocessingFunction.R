@@ -3,8 +3,8 @@
 # Function to download the raw data
 downloadRawStates <- function() {
   # The ne_states() function downloads the data
-  rnaturalearth::ne_states(country = "United States of America",
-                           returnclass = "sf")
+  tigris::states() |>
+    sf::st_transform(crs = 4326)
 }
 
 # Function to process the raw data into the lower 48
@@ -20,9 +20,10 @@ processLower48 <- function(rawStatesData) {
   
   # Filter the sf dataframe
   lower48 <- rawStatesData |>
-    dplyr::filter(!name %in% exclude) |>
-    dplyr::select(name, postal)
-  
+    dplyr::filter(!NAME %in% exclude) |>
+    dplyr::select("stateName" = NAME,
+                  "stateGEOID" = GEOID )
+   
   return(lower48)
 }
 
@@ -50,12 +51,12 @@ filterCountiesToLower48 <- function(tigrisCountiesData, lower48StatesData) {
   # Filter to keep only counties that successfully joined (i.e., are in the lower 48)
   # and select a clean set of columns
   lower48Counties <- counties_joined %>%
-    dplyr::filter(!is.na(name)) %>% # 'name' comes from lower48StatesData
+    dplyr::filter(!is.na(NAME)) %>% # 'name' comes from lower48StatesData
     dplyr::select(
       countyName = NAME,        # from tigris
       countyGeoId = GEOID,       # from tigris
-      stateName = name,          # from lower48StatesData
-      statePostal = postal       # from lower48StatesData
+      stateName = NAME,          # from lower48StatesData
+      stateGEOID = stateGEOID       # from lower48StatesData
     )
   
   return(lower48Counties)
@@ -77,14 +78,52 @@ lower48Extent <- function(lower48){
 ## spilt into MLRA and LRR 
 ## export results 
 ## url pulled from https://www.nrcs.usda.gov/resources/data-and-reports/major-land-resource-area-mlra
-# extent48 <- terra::vect(x = "data/derived/us/lower48.gpkg")
-processMLRA <- function(mlraPath, extent48){
-  mlra <- terra::vect(mlraPath) |> terra::crop(extent48)
+# extent48 <- sf::st_read( "data/derived/us/lower48.gpkg")
+# mlraPath <- "data/raw/mlra/MLRA_52_2022/MLRA_52.shp"
+processMLRA <- function(mlra_Path, extent_48){
+  mlra <- sf::st_read(mlra_Path) |> sf::st_crop(extent_48)
   return(mlra)
+}
+
+# aggregate the mlra data to the LRR level 
+generateLRR <- function(lower48MLRA){
+  lrr <- lower48MLRA |>
+    dplyr::group_by(LRRSYM) |>
+    dplyr::summarise(
+      lrrNAME = dplyr::first(LRR_NAME)
+    )
+  return(lrr)
 }
 
 
 
+# generate the 100km grid object  --------------------------------------------------
+buildAGrid <- function(extent_object, cell_size){
+  # transform to equal area 
+  ea <- sf::st_transform(extent_object, 5070)
+  # generate grid 
+  grid <- sf::st_make_grid(
+    x = ea, 
+    cellsize = cell_size
+  )
+  if("id" %in% names(ea)){
+    ids <- paste0(ea$id[1],"-",as.hexmode(1:length(grid)))
+  }else{
+    ids = as.hexmode(1:length(grid))
+  }
+  # generate ID 
+  gridID <- sf::st_sf(
+    id = ids,
+    geomentry = grid)
+  # export 
+  return(gridID)
+}
+
+
+
+
+
+# export data  ------------------------------------------------------------
 
 # A helper function to save any sf object as a .gpkg file
 saveGeopackageSF <- function(sfObject, outputPath) {
@@ -97,13 +136,15 @@ saveGeopackageSF <- function(sfObject, outputPath) {
   # Return the path for {targets} to track as a file
   return(outputPath)
 }
-saveGeopackageTerra <- function(terraObject, outputPath) {
-  # Ensure the directory exists
-  # dir.create(dirname(outputPath), recursive = TRUE, showWarnings = FALSE)
-  
-  # Write the file, overwriting if needed (targets controls the "if needed" part)
-  terra::writeVector(terraObject, outputPath, overwrite = TRUE)
-  
-  # Return the path for {targets} to track as a file
-  return(outputPath)
-}
+
+## avoiding terra objects for a little bit as they are a bit more to handle within targets 
+# saveGeopackageTerra <- function(terraObject, outputPath) {
+#   # Ensure the directory exists
+#   # dir.create(dirname(outputPath), recursive = TRUE, showWarnings = FALSE)
+#   
+#   # Write the file, overwriting if needed (targets controls the "if needed" part)
+#   terra::writeVector(terraObject, outputPath, overwrite = TRUE)
+#   
+#   # Return the path for {targets} to track as a file
+#   return(outputPath)
+# }

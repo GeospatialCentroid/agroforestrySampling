@@ -2,10 +2,11 @@
 
 library(targets)
 library(tarchetypes) 
+library(geotargets)
 
 # Load packages required by your functions
 tar_option_set(
-  packages = c("sf", "dplyr", "rnaturalearth", "tigris")
+  packages = c("sf", "dplyr", "tigris", "targets")
 )
 
 # Source the functions (which we will also rename)
@@ -73,33 +74,52 @@ list(
     name = extent48File,
     command = saveGeopackageSF(extent48, "data/derived/us/extent48.gpkg"),
     format = "file"
-  )
+  ),
 
   # MLRA processing ---------------------------------------------------------
   # process MLRA data 
-  # tar_target(
-  #   name = mlraPath, 
-  #   command = {"data/raw/mlra/MLRA_52_2022/MLRA_52.shp"},
-  #   format = "file"
-  # )
+  tar_target(
+    name = mlraPath,
+    command = {"data/raw/mlra/MLRA_52_2022/MLRA_52.shp"},
+    format = "file"
+  ),
   
-  # tar_target(
-  #   name = lower48MLRA,
-  #   command = processMLRA(mlraPath, extent48)
-  # ),
-  # 
+  tar_target(
+    name = lower48MLRA,
+    command = processMLRA(mlraPath, extent48)
+  ),
+
   # # 7. Save the filtered counties to a file
-  # tar_target(
-  #   name = lower48MLRAFile,
-  #   command = saveGeopackageTerra(lower48MLRA, "data/derived/mlra/lower48MLRA.gpkg"),
-  #   format = "file"
-  # )
+  tar_target(
+    name = lower48MLRAFile,
+    command = saveGeopackageSF(lower48MLRA, "data/derived/mlra/lower48MLRA.gpkg"),
+    format = "file"
+  ),
   
-  ## format to CRS and lower 48 
-  ## spilt into MLRA and LRR 
-  ## export results 
+  # 8. generate the lrr 
+  tar_target(
+    name =lrr48,
+    command = generateLRR(lower48MLRA = lower48MLRA)
+  ),
   
-  
+  # 9. export the dataset 
+  tar_target(
+    name = lower48LRRFile,
+    command = saveGeopackageSF(lrr48, "data/derived/mlra/lower48LRR.gpkg"),
+    format = "file"
+  ),
+  # developing sample grids  ---------------------------------------------------------
+  # 10. 100km grid in AEA 
+  tar_target(
+    name = grid100ARA,
+    command = buildAGrid(extent_object = extent48, cell_size = 100000)
+  ),
+  # 11. export the 100km AEA dataset 
+  tar_target(
+    name = grid100ARAFile,
+    command = saveGeopackageSF(grid100ARA, "data/derived/grids/grid100km_aea.gpkg"),
+    format = "file"
+  )
 )
 
 
