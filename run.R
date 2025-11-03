@@ -18,5 +18,13 @@ overwrite = TRUE
 if(!file.exists(export) | isTRUE(overwrite)){
   sf::st_write(aoi,export, delete_dsn  = TRUE)
 }
+# produce cropped sub grid areas for all mlra and lrr areas at 10km, 2km, and 1km 
 source("1_developGridsForAOI.R")
+
+# attribute data to all grids 
+## TOF measure per year  
+## NLCD cover per year 
+## road network 
+
+
 
