@@ -78,12 +78,101 @@ list(
   ),
   # export files for the next targets workflow
   ## waiting on this for now and will just u
-
   tar_target(
     name = export1k,
     command = saveGeopackageSF(
       sfObject = aoi1k,
       outputPath = paste0("data/derived/grids/", config$aoiName, "_1km.gpkg")
     )
-  )
+  ), 
+  
+  # process the MLRA grids  -------------------------------------------------
+  ## read in the AOI record but keep it in WGS84 
+  tar_target(
+    name = aoi84,
+    command = sf::st_read(aoiFile)
+  ),
+  tar_target(
+    name = grids84,
+    command = sf::st_transform(aoi1k, crs = 4326)
+  ),
+  # load in the MLRA data 
+  # establish the AOI
+  tar_target(mlraFile, "data/derived/mlra/lower48MLRA.gpkg", format = "file"),
+  # read in the aoi and transform to AEA
+  tar_target(
+    name = mlraSample,
+    command = sf::st_read(mlraFile)
+  ),
+  tar_target(
+    name = mlraCrop,
+    command = cropToAOI(
+      object = mlraSample,
+      aoi = aoi84
+    )
+  ),
+  tar_target(
+    name = exportMLRACrop,
+    command = saveGeopackageSF(
+      sfObject = mlraCrop,
+      outputPath = paste0("data/derived/mlra/", config$aoiName, "_MLRA.gpkg")
+    )
+  ), 
+
+  
+  # prep for the group function 
+  tar_target(mlraGroups, unique(mlraCrop$MLRA_ID)),
+  # apply the itorative elements 
+  tar_target(
+    mlra_1kGrids,
+    command = cropGridsMLRA(mlra_Group = mlraGroups,
+                        mlra = mlraCrop,
+                        grids_84 = grids84),
+    pattern = map(mlraGroups)
+  ),
+  tar_target(
+    name = mlra_1kGridsExport,
+    command = saveGeopackageSF(
+      sfObject = mlra_1kGrids,
+      outputPath = paste0("data/derived/grids/", config$aoiName, "_",config$gridSize,"_mlra.gpkg")
+    )
+  ),
+  # establish the AOI
+  tar_target(lrrFile, "data/derived/mlra/lower48LRR.gpkg", format = "file"),
+  # read in the aoi and transform to AEA
+  tar_target(
+    name = lrrSample,
+    command = sf::st_read(lrrFile)
+  ),
+  tar_target(
+    name = lrrCrop,
+    command = cropToAOI(
+      object = lrrSample,
+      aoi = aoi84
+    )
+  ),
+  tar_target(
+    name = exportLLRCrop,
+    command = saveGeopackageSF(
+      sfObject = lrrCrop,
+      outputPath = paste0("data/derived/mlra/", config$aoiName, "_LRR.gpkg")
+    )
+  ), 
+  # prep for the group function 
+  tar_target(lrrGroups, unique(mlraCrop$LRRSYM)),
+  # apply the itorative elements to the LRR 
+  tar_target(
+    lrr_1kGrids,
+    command = cropGridsLRR(lrr_Group = lrrGroups,
+                        lrr = lrrCrop,
+                        grids_84 = grids84),
+    pattern = map(lrrGroups)
+  ),
+  tar_target(
+    name = lrr_1kGridsExport,
+    command = saveGeopackageSF(
+      sfObject = lrr_1kGrids,
+      outputPath = paste0("data/derived/grids/", config$aoiName, "_",config$gridSize,"_lrr.gpkg")
+    )
+  ) 
 )

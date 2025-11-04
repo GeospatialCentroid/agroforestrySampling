@@ -14,10 +14,11 @@ source("scripts/generateAOI.R")
 aoi <- generateAOI(id = "Nebraska", type = "state")
 # need to write this so it can becomes a target for the next workflow 
 export <- "data/derived/aoi/aoi.gpkg"
-overwrite = TRUE
+overwrite = FALSE
 if(!file.exists(export) | isTRUE(overwrite)){
   sf::st_write(aoi,export, delete_dsn  = TRUE)
 }
+source("0_preprocessing.R")
 # produce cropped sub grid areas for all mlra and lrr areas at 10km, 2km, and 1km 
 source("1_developGridsForAOI.R")
 

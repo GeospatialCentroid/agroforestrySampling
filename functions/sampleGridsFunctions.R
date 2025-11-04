@@ -46,13 +46,49 @@ select100km <- function(original_100km, aoi_feature){
 
 
 # process grids to MLRA  --------------------------------------------------
+# object <- sf::st_read("data/derived/mlra/lower48MLRA.gpkg")
+# aoi <- sf::st_read("data/derived/aoi/aoi.gpkg")
+# 
+# # specific grid of interest 
+# grid <- sf::st_read("data/derived/grids")
+# 
 
+# crop to AOI 
+cropToAOI <- function(object, aoi){
+  object1 <- object |>
+    sf::st_intersection(aoi)
+  return(object1)
+}
 
+# funtion to 
+# aoi <- sf::st_read("data/derived/aoi/aoi.gpkg")
+# grids <- sf::st_read("data/derived/grids/Nebraska_1km.gpkg")
+# # keep things in WGS for now 
+# grids84 <- sf::st_transform(grids, crs = 4326)
+# # read in and crop the MLRA dataset 
+# mlra <- sf::st_read("data/derived/mlra/lower48MLRA.gpkg") |>
+#   sf::st_intersection(aoi)
+
+cropGridsMLRA <- function(mlra_Group, mlra, grids_84){
+  # select area 
+  feat <- mlra[mlra$MLRA_ID == mlra_Group,]|>
+    sf::st_make_valid()
+  # select all features in the group 
+  selected <- grids_84 |>
+    sf::st_intersection(feat)
+  return(selected)
+}  
 
 # process grids to lrr ----------------------------------------------------
-
-
-
+cropGridsLRR <- function(lrr_Group, lrr, grids_84){
+  # select area 
+  feat <- lrr[lrr$LRRSYM  == lrr_Group,]|>
+    sf::st_make_valid()
+  # select all features in the group 
+  selected <- grids_84 |>
+    sf::st_intersection(feat)
+  return(selected)
+} 
 
 
 

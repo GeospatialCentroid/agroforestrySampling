@@ -18,7 +18,6 @@ lower48MLRAFile|stem|8d48a93cd0d62f7f|a15715d8a8f1f3b7|01e009c6471eed17|-1391189
 .Random.seed|object|0d7c17d10e71769a
 lrr48|stem|6ce69c2b9a6098f8|4fac3e81484c1031|8522682ed6c5abd8|-850446049||t20389.802513697s|s870033b|870033|rds|local|vector|||1.396||
 lower48LRRFile|stem|0d81b9cea84b33de|5fd38321cf439550|75f27a9ed9180c66|-1415956790|data/derived/mlra/lower48LRR.gpkg|t20389.8025148203s|s1142784b|1142784|file|local|vector|||0.064||
-lower48MLRA|stem|dd69b0421b173099|4214434dd4eebe6e|815418dba6e6d829|748161502||t20389.8071815951s|s1485519b|1485519|rds|local|vector|||0.781|attribute variables are assumed to be spatially constant throughout all geometries|
 grid100ARA|stem|30d81e5c18cdfcfd|1172a709a4c16868|99ca2af191afd5e0|-318888652||t20389.9205574808s|s11985b|11985|rds|local|vector|||0.086||
 grid100ARAFile|stem|d3dc93aff1e88282|b3fa4fc8adfde7dc|2c39eee7981ea282|2012520616|data/derived/grids/grid100km_aea.gpkg|t20389.9205585327s|s581632b|581632|file|local|vector|||0.064||
 original100kmFile|stem|d3dc93aff1e88282|c0afa6ad1ba9351f|2c530c1562a7fbd1|145809587|data/derived/grids/grid100km_aea.gpkg|t20389.9205585327s|s581632b|581632|file|local|vector|||0.283||
@@ -28,7 +27,15 @@ aoi50k|stem|cb8d8714aa454778|e60fa83f2e3ab040|a651c5d5b4a7b607|-1067713971||t203
 aoi10k|stem|b20b5862103469d8|efaf4c710a502996|4f2ee5094b056642|-1877900779||t20389.9758924328s|s24365b|24365|rds|local|vector|||0.567||
 aoi2k|stem|c6562547e080af42|60a15ed492f46e5e|dec7653e65a97a08|-642064319||t20389.9760287967s|s465702b|465702|rds|local|vector|||11.588||
 aoi1k|stem|b0fa41ead0c8ad4b|8a3faea1bde1af34|5cd4b109ded489b9|1375526320||t20389.9789083829s|s1910392b|1910392|rds|local|vector|||247.94||
-aoi|stem|c3404c3eacb604d0|144885e84618bfe6|a83cb48561957627|1925018349||t20390.8546776518s|s7094b|7094|rds|local|vector|||0.055||
+config_sample_file|stem|c1a395e01af0d108|c46c76ca6afbdca9|2c530c1562a7fbd1|1255666687|_target_config.yml|t20395.767858292s|s20b|20|file|local|vector|||0.277||
+config_sample|stem|55a20183ca8ee944|7ca15a46a1989a34|7f5c3bf901688503|1402500372||t20395.7721578764s|s90b|90|rds|local|vector|||0.001|incomplete final line found on '_target_config.yml'|
+config_file|stem|86189d8fc56e97d9|c46c76ca6afbdca9|2c530c1562a7fbd1|-615108176|_target_config.yml|t20395.7746653052s|s37b|37|file|local|vector|||0.297||
+config|stem|2a49d1e63c2a48e2|a8e842b5a57e39b7|603411117dd11a24|-1931060652||t20395.775951766s|s111b|111|rds|local|vector|||0.001|incomplete final line found on '_target_config.yml'|
+gridFile|stem|65c0435f81d60f58|6d22a5a0301838c2|b53a2d1ff7f56d28|-1674075430||t20395.7763141196s|s93b|93|rds|local|vector|||0||
+aoiFile|stem|6fdfc65e27b5f103|318fdfad0fbae971|2c530c1562a7fbd1|1433334491|data/derived/aoi/aoi.gpkg|t20395.9436502915s|s102400b|102400|file|local|vector|||0.286||
+aoi|stem|c3404c3eacb604d0|144885e84618bfe6|4f686317bd6db682|1925018349||t20395.9437404388s|s7094b|7094|rds|local|vector|||0.1||
+aoi84|stem|cdbe25495cf9f934|9e1e63edd319aaee|4f686317bd6db682|1211783765||t20395.9471135806s|s5196b|5196|rds|local|vector|||0.028||
+export1k|stem|8199e78529d8208a|a2819082e7ab1925|0220308f27dffcb4|648764778||t20395.9471361462s|s89b|89|rds|local|vector|||1.419||
 downloadTigrisCounties|function|a0f99e52f66acbac
 filterCountiesToLower48|function|af0de614e0adbae5
 processMLRA|function|cba481c57706a95f
@@ -37,14 +44,50 @@ generateLRR|function|38bbaf9688b715ca
 buildAGrid|function|60ea3761e3819408
 lower48Extent|function|839ee73afcb69b0f
 downloadRawStates|function|21b2c58fe5456b5e
-config_sample_file|stem|c1a395e01af0d108|c46c76ca6afbdca9|2c530c1562a7fbd1|1255666687|_target_config.yml|t20395.767858292s|s20b|20|file|local|vector|||0.277||
-config_sample|stem|55a20183ca8ee944|7ca15a46a1989a34|7f5c3bf901688503|1402500372||t20395.7721578764s|s90b|90|rds|local|vector|||0.001|incomplete final line found on '_target_config.yml'|
+lower48MLRA|object|c49f344fd2cd0885
+mlraFile|stem|8d48a93cd0d62f7f|60c415ed9ac0e4b2|2c530c1562a7fbd1|-1972766395|data/derived/mlra/lower48MLRA.gpkg|t20389.7264450386s|s2220032b|2220032|file|local|vector|||0.288||
+mlraSample|stem|c2503c83fcc6e174|bf73ecc1ed09d66b|c2376e880dfa4b1a|1451218623||t20395.9506201195s|s1484842b|1484842|rds|local|vector|||0.037||
+mlraCrop|stem|8862933111df96c4|a06251cd3dd7d04c|d5af1cf266d9c036|-1144717416||t20395.9749022706s|s22991b|22991|rds|local|vector|||0.146|attribute variables are assumed to be spatially constant throughout all geometries|
+mlraGroups|stem|7626bcc2b6325bc6|b20fe8262dda6da9|6cf1b0c51dcbaaed|-508908314||t20395.9749027482s|s95b|95|rds|local|vector|||0||
+exportMLRACrop|stem|044c597eeb7318d4|63d6eb0c5b911b1e|ddfe1116ffd15ea0|-1603636503||t20395.9749038986s|s89b|89|rds|local|vector|||0.072||
+grids84|stem|96875385c2eafb02|f0ae882a55689c76|24d4ebfd2c496cbe|2143391564||t20395.9875497912s|s7109859b|7109859|rds|local|vector|||1.321||
+cropGrids|function|38db6193d70c94ca
+mlra_1kGrids|pattern|43f9c110175cf595|dcde4bd1286b1b29||889403967||||7605935|rds|local|vector||mlra_1kGrids_4beecb22a66a5516*mlra_1kGrids_5b6863dfcfa0aacf*mlra_1kGrids_04ffe612165d1fa8*mlra_1kGrids_ffd5c281ec86d07a*mlra_1kGrids_352ec48225734184*mlra_1kGrids_a83a10b6e2a03745*mlra_1kGrids_4d55f4cadf152079*mlra_1kGrids_53d0bdff1cc40d8d*mlra_1kGrids_0530121d7eae2a08*mlra_1kGrids_899ed3d8503bddd8*mlra_1kGrids_4454a0acd683425e*mlra_1kGrids_b65990a842e9c6cf*mlra_1kGrids_964796b57efb2669*mlra_1kGrids_6fae8f7338095efe*mlra_1kGrids_62b776da520545ad|85.655||
+lrrFile|stem|0d81b9cea84b33de|fdf59af4b23ee73e|2c530c1562a7fbd1|-213729736|data/derived/mlra/lower48LRR.gpkg|t20389.8025148203s|s1142784b|1142784|file|local|vector|||0.282||
+lrrSample|stem|60e49895f4411806|026b14cbc6a38a4b|ceff1b1f1a7f8441|-159809484||t20395.9996095434s|s870137b|870137|rds|local|vector|||0.03||
+lrrCrop|stem|62f2a1184b2bb062|cd8930cd758a2aae|6e6e0b060d8c775a|1870234349||t20395.9996111324s|s11154b|11154|rds|local|vector|||0.088|attribute variables are assumed to be spatially constant throughout all geometries|
+lrrGroups|stem|556d764619fb4e6c|097aa2d107bceabd|6cf1b0c51dcbaaed|-379225699||t20395.9996112488s|s61b|61|rds|local|vector||lrrGroups_52740472df0165d6*lrrGroups_a4d0c97693c92923*lrrGroups_cdb3207c7cdf8d7f*lrrGroups_0e64eff6c8481a3a|0||
+exportLLRCrop|stem|386c5422b304068f|98d199212aa83895|15e738ff5776b5c5|929337828||t20395.9996120336s|s88b|88|rds|local|vector|||0.053||
+lrr_1kGrids_e98c00a699fa42b8|branch|7f565c1bb12fa01d|7a0096d54db2eb54|7d3756ea73dbac0c|556925138||t20396.0004209889s|s7169b|7169|rds|local|vector|lrr_1kGrids||5.309|attribute variables are assumed to be spatially constant throughout all geometries|
+lrr_1kGrids_8d6ef412060f2d66|branch|de8f2350655750ae|7a0096d54db2eb54|7d3756ea73dbac0c|1518419280||t20396.0005309867s|s3138934b|3138934|rds|local|vector|lrr_1kGrids||8.357|attribute variables are assumed to be spatially constant throughout all geometries|
+lrr_1kGrids_acfbd841f29fbd02|branch|93596eea5b2a09b2|7a0096d54db2eb54|7d3756ea73dbac0c|1593851413||t20396.0006342203s|s2606129b|2606129|rds|local|vector|lrr_1kGrids||8.084|attribute variables are assumed to be spatially constant throughout all geometries|
+lrr_1kGrids_ab92f707661b24db|branch|1c36a785837ed51d|7a0096d54db2eb54|7d3756ea73dbac0c|-673067005||t20396.0007244224s|s1542318b|1542318|rds|local|vector|lrr_1kGrids||7.12|attribute variables are assumed to be spatially constant throughout all geometries|
+lrr_1kGrids|pattern|f5c15737838c7e60|7a0096d54db2eb54||-71534982||||7294550|rds|local|vector||lrr_1kGrids_e98c00a699fa42b8*lrr_1kGrids_8d6ef412060f2d66*lrr_1kGrids_acfbd841f29fbd02*lrr_1kGrids_ab92f707661b24db|28.87||
+mlra_1kGrids_4beecb22a66a5516|branch|ecf609df45b59cef|6052156345fb7c49|f67cb66cfe42412f|-551475019||t20396.000792801s|s7296b|7296|rds|local|vector|mlra_1kGrids||5.374|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_5b6863dfcfa0aacf|branch|64544dea5c1803dd|6052156345fb7c49|f67cb66cfe42412f|-1794633562||t20396.0008619386s|s93007b|93007|rds|local|vector|mlra_1kGrids||5.506|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_04ffe612165d1fa8|branch|99d9408bf157c3c9|6052156345fb7c49|f67cb66cfe42412f|-20567329||t20396.0009291625s|s99464b|99464|rds|local|vector|mlra_1kGrids||5.378|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_ffd5c281ec86d07a|branch|ae4973e532e7cd49|6052156345fb7c49|f67cb66cfe42412f|1940184793||t20396.0010012849s|s475576b|475576|rds|local|vector|mlra_1kGrids||5.619|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_352ec48225734184|branch|bd73d5c0d2beeaa5|6052156345fb7c49|f67cb66cfe42412f|431244500||t20396.0011011909s|s1916229b|1916229|rds|local|vector|mlra_1kGrids||7.619|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_a83a10b6e2a03745|branch|1b249ad708b17e59|6052156345fb7c49|f67cb66cfe42412f|924823889||t20396.0011780817s|s338412b|338412|rds|local|vector|mlra_1kGrids||6.137|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_4d55f4cadf152079|branch|b6c2f3b95c2cf4e0|6052156345fb7c49|f67cb66cfe42412f|134282700||t20396.0012520056s|s381018b|381018|rds|local|vector|mlra_1kGrids||5.912|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_53d0bdff1cc40d8d|branch|e7da133d45daaaeb|6052156345fb7c49|f67cb66cfe42412f|-1020121136||t20396.0013300608s|s815616b|815616|rds|local|vector|mlra_1kGrids||5.856|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_0530121d7eae2a08|branch|1af54c69ed327cab|6052156345fb7c49|f67cb66cfe42412f|-2090753796||t20396.0014057493s|s596070b|596070|rds|local|vector|mlra_1kGrids||6.025|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_899ed3d8503bddd8|branch|06d3a83f8ad8cac1|6052156345fb7c49|f67cb66cfe42412f|1843449056||t20396.0014827334s|s585807b|585807|rds|local|vector|mlra_1kGrids||6.106|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_4454a0acd683425e|branch|edb63a725e644e42|6052156345fb7c49|f67cb66cfe42412f|-1176100557||t20396.0015511439s|s13819b|13819|rds|local|vector|mlra_1kGrids||5.462|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_b65990a842e9c6cf|branch|8969aad142322d99|6052156345fb7c49|f67cb66cfe42412f|-55452980||t20396.0016232985s|s691549b|691549|rds|local|vector|mlra_1kGrids||5.684|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_964796b57efb2669|branch|f0c8855db0e06356|6052156345fb7c49|f67cb66cfe42412f|200724108||t20396.0016966235s|s840188b|840188|rds|local|vector|mlra_1kGrids||5.784|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_6fae8f7338095efe|branch|5cd9a7ffc2307743|6052156345fb7c49|f67cb66cfe42412f|-1122898824||t20396.0017636409s|s199789b|199789|rds|local|vector|mlra_1kGrids||5.365|attribute variables are assumed to be spatially constant throughout all geometries|
+mlra_1kGrids_62b776da520545ad|branch|06af86b97430657f|6052156345fb7c49|f67cb66cfe42412f|-477004574||t20396.001839528s|s552095b|552095|rds|local|vector|mlra_1kGrids||5.946|attribute variables are assumed to be spatially constant throughout all geometries|
+lrr_1kGridsExport|stem|0ba055501f9a5a81|7e2ae43132b61ead|c9f0e5e892c0512b|737634185||t20396.005885974s|s93b|93|rds|local|vector|||0.907||
 saveGeopackageSF|function|4fe187488f06183e
-export1k|stem|8199e78529d8208a|a2819082e7ab1925|4f064f71ddbafbf6|648764778||t20395.7743297995s|s89b|89|rds|local|vector|||0.99||
-config_file|stem|86189d8fc56e97d9|c46c76ca6afbdca9|2c530c1562a7fbd1|-615108176|_target_config.yml|t20395.7746653052s|s37b|37|file|local|vector|||0.297||
-config|stem|2a49d1e63c2a48e2|a8e842b5a57e39b7|603411117dd11a24|-1931060652||t20395.775951766s|s111b|111|rds|local|vector|||0.001|incomplete final line found on '_target_config.yml'|
-aoiFile|stem|65c0435f81d60f58|6d22a5a0301838c2|b53a2d1ff7f56d28|1433334491||t20395.7759521661s|s93b|93|rds|local|vector|||0||
+mlra_1kGridsExport|stem|0f23a35f80bbe24e|fa40e988bf4aadd6|69428fb52aff12a3|-1359678833||t20396.0065186256s|s94b|94|rds|local|vector|||1.086||
+mlraGrid_attPath|stem|a7afa2f70d3716c7|433d7b24a91bc781|b53a2d1ff7f56d28|-1439102418|data/derived/grids/Nebraska_1km_mlra.gpkg|t20396.0065185837s|s64016384b|64016384|file|local|vector|||0||
+mlraGrid_att|stem|995e2686f42474c4|29511cb0d7ab9d0c|9d91aa5b85c69469|-1701202076||t20396.0087382396s|s7088184b|7088184|rds|local|vector|||1.981||
+cropGridsLRR|function|e368700856091336
+cropGridsMLRA|function|38db6193d70c94ca
 buildGrids|function|60ea3761e3819408
 select100km|function|7044b3744c41ac96
+cropToAOI|function|cf5139e22450e984
 buildSubGrids|function|b3ef07bce0bf9530
-gridFile|stem|65c0435f81d60f58|6d22a5a0301838c2|b53a2d1ff7f56d28|-1674075430||t20395.7763141196s|s93b|93|rds|local|vector|||0||
+aoi_attPath|stem|6fdfc65e27b5f103|318fdfad0fbae971|2c530c1562a7fbd1|-1539377130|data/derived/aoi/aoi.gpkg|t20395.9436502915s|s102400b|102400|file|local|vector|||0.283||
+aoi_att|stem|cdbe25495cf9f934|12188f504be0c913|0e6987f60fa77c99|1965033546||t20396.01017439s|s5196b|5196|rds|local|vector|||0.028||

@@ -20,19 +20,37 @@ list(
   ),
   # establish the AOI
   tar_target(
-    gridFile,
+    aoi_attPath,
+    command = "data/derived/aoi/aoi.gpkg",
+    format = "file"
+  ),
+  tar_target(
+    name = aoi_att,
+    command = sf::st_read(aoi_attPath)
+  ),
+  # establish the MLRA grids 
+  tar_target(
+    mlraGrid_attPath,
     paste0(
       "data/derived/grids/",
       config$aoiName,
       "_",
       config$gridSize,
-      ".gpkg",
-      format = "file"
-    ),
-    # read in the aoi and transform to AEA
+      "_mlra.gpkg"),
+    format = "file"
   ),
+  ### 
+  tar_target(
+    name = mlraGrid_att,
+    command = sf::st_read(mlraGrid_attPath)
+  )
+  
+  
   ### attribute information to each grid
   ### TOF 10,16,20
+  ### - get the reference intersections for each 12 mile grid  
+  ### - use that to pull in possible imagery
+  
   ### riparian area
   ### NLCD coverage 10,16,20
   ### road length
