@@ -15,36 +15,23 @@ lower48CountiesData|stem|b8edac20601fead4|f5d4c9934ea877e9|1bf3f07e4d95e95d|1685
 extent48File|stem|5bc8ff895a42430c|f4302fafb72e7a59|ffcf3862ba399863|-1495096926|data/derived/us/extent48.gpkg|t20389.7256812504s|s98304b|98304|file|local|vector|||0.072||
 lower48CountiesFile|stem|3b243209e8ee9f45|99538639ce9b96e9|6147f004286ffb6b|1214712293|data/derived/us/lower48_counties.gpkg|t20389.7257107288s|s26525696b|26525696|file|local|vector|||2.431||
 lower48MLRAFile|stem|8d48a93cd0d62f7f|a15715d8a8f1f3b7|01e009c6471eed17|-1391189159|data/derived/mlra/lower48MLRA.gpkg|t20389.7264450386s|s2220032b|2220032|file|local|vector|||0.095||
-.Random.seed|object|0d7c17d10e71769a
 lrr48|stem|6ce69c2b9a6098f8|4fac3e81484c1031|8522682ed6c5abd8|-850446049||t20389.802513697s|s870033b|870033|rds|local|vector|||1.396||
 lower48LRRFile|stem|0d81b9cea84b33de|5fd38321cf439550|75f27a9ed9180c66|-1415956790|data/derived/mlra/lower48LRR.gpkg|t20389.8025148203s|s1142784b|1142784|file|local|vector|||0.064||
 grid100ARA|stem|30d81e5c18cdfcfd|1172a709a4c16868|99ca2af191afd5e0|-318888652||t20389.9205574808s|s11985b|11985|rds|local|vector|||0.086||
 grid100ARAFile|stem|d3dc93aff1e88282|b3fa4fc8adfde7dc|2c39eee7981ea282|2012520616|data/derived/grids/grid100km_aea.gpkg|t20389.9205585327s|s581632b|581632|file|local|vector|||0.064||
 original100kmFile|stem|d3dc93aff1e88282|c0afa6ad1ba9351f|2c530c1562a7fbd1|145809587|data/derived/grids/grid100km_aea.gpkg|t20389.9205585327s|s581632b|581632|file|local|vector|||0.283||
 original100km|stem|4fbdd95f86584ba3|5f0034ffaf0bf04a|5d9e06ae43b677a0|227052771||t20389.9639716554s|s18346b|18346|rds|local|vector|||0.04||
-selectAOI100km|stem|05f7821b6ce8a2f0|e7dd20b12ad8cf61|b106af19cc06c5f6|-823311553||t20389.9758834814s|s1712b|1712|rds|local|vector|||0.014||
 aoi50k|stem|cb8d8714aa454778|e60fa83f2e3ab040|a651c5d5b4a7b607|-1067713971||t20389.9758856195s|s2587b|2587|rds|local|vector|||0.174||
 aoi10k|stem|b20b5862103469d8|efaf4c710a502996|4f2ee5094b056642|-1877900779||t20389.9758924328s|s24365b|24365|rds|local|vector|||0.567||
 aoi2k|stem|c6562547e080af42|60a15ed492f46e5e|dec7653e65a97a08|-642064319||t20389.9760287967s|s465702b|465702|rds|local|vector|||11.588||
 aoi1k|stem|b0fa41ead0c8ad4b|8a3faea1bde1af34|5cd4b109ded489b9|1375526320||t20389.9789083829s|s1910392b|1910392|rds|local|vector|||247.94||
 config_sample_file|stem|c1a395e01af0d108|c46c76ca6afbdca9|2c530c1562a7fbd1|1255666687|_target_config.yml|t20395.767858292s|s20b|20|file|local|vector|||0.277||
 config_sample|stem|55a20183ca8ee944|7ca15a46a1989a34|7f5c3bf901688503|1402500372||t20395.7721578764s|s90b|90|rds|local|vector|||0.001|incomplete final line found on '_target_config.yml'|
-config_file|stem|86189d8fc56e97d9|c46c76ca6afbdca9|2c530c1562a7fbd1|-615108176|_target_config.yml|t20395.7746653052s|s37b|37|file|local|vector|||0.297||
-config|stem|2a49d1e63c2a48e2|a8e842b5a57e39b7|603411117dd11a24|-1931060652||t20395.775951766s|s111b|111|rds|local|vector|||0.001|incomplete final line found on '_target_config.yml'|
 gridFile|stem|65c0435f81d60f58|6d22a5a0301838c2|b53a2d1ff7f56d28|-1674075430||t20395.7763141196s|s93b|93|rds|local|vector|||0||
 aoiFile|stem|6fdfc65e27b5f103|318fdfad0fbae971|2c530c1562a7fbd1|1433334491|data/derived/aoi/aoi.gpkg|t20395.9436502915s|s102400b|102400|file|local|vector|||0.286||
 aoi|stem|c3404c3eacb604d0|144885e84618bfe6|4f686317bd6db682|1925018349||t20395.9437404388s|s7094b|7094|rds|local|vector|||0.1||
 aoi84|stem|cdbe25495cf9f934|9e1e63edd319aaee|4f686317bd6db682|1211783765||t20395.9471135806s|s5196b|5196|rds|local|vector|||0.028||
 export1k|stem|8199e78529d8208a|a2819082e7ab1925|0220308f27dffcb4|648764778||t20395.9471361462s|s89b|89|rds|local|vector|||1.419||
-downloadTigrisCounties|function|a0f99e52f66acbac
-filterCountiesToLower48|function|af0de614e0adbae5
-processMLRA|function|cba481c57706a95f
-processLower48|function|ade0ee29880e3f8e
-generateLRR|function|38bbaf9688b715ca
-buildAGrid|function|60ea3761e3819408
-lower48Extent|function|839ee73afcb69b0f
-downloadRawStates|function|21b2c58fe5456b5e
-lower48MLRA|object|c49f344fd2cd0885
 mlraFile|stem|8d48a93cd0d62f7f|60c415ed9ac0e4b2|2c530c1562a7fbd1|-1972766395|data/derived/mlra/lower48MLRA.gpkg|t20389.7264450386s|s2220032b|2220032|file|local|vector|||0.288||
 mlraSample|stem|c2503c83fcc6e174|bf73ecc1ed09d66b|c2376e880dfa4b1a|1451218623||t20395.9506201195s|s1484842b|1484842|rds|local|vector|||0.037||
 mlraCrop|stem|8862933111df96c4|a06251cd3dd7d04c|d5af1cf266d9c036|-1144717416||t20395.9749022706s|s22991b|22991|rds|local|vector|||0.146|attribute variables are assumed to be spatially constant throughout all geometries|
@@ -79,15 +66,48 @@ mlra_1kGrids_964796b57efb2669|branch|f0c8855db0e06356|6052156345fb7c49|f67cb66cf
 mlra_1kGrids_6fae8f7338095efe|branch|5cd9a7ffc2307743|6052156345fb7c49|f67cb66cfe42412f|-1122898824||t20396.0017636409s|s199789b|199789|rds|local|vector|mlra_1kGrids||5.365|attribute variables are assumed to be spatially constant throughout all geometries|
 mlra_1kGrids_62b776da520545ad|branch|06af86b97430657f|6052156345fb7c49|f67cb66cfe42412f|-477004574||t20396.001839528s|s552095b|552095|rds|local|vector|mlra_1kGrids||5.946|attribute variables are assumed to be spatially constant throughout all geometries|
 lrr_1kGridsExport|stem|0ba055501f9a5a81|7e2ae43132b61ead|c9f0e5e892c0512b|737634185||t20396.005885974s|s93b|93|rds|local|vector|||0.907||
-saveGeopackageSF|function|4fe187488f06183e
 mlra_1kGridsExport|stem|0f23a35f80bbe24e|fa40e988bf4aadd6|69428fb52aff12a3|-1359678833||t20396.0065186256s|s94b|94|rds|local|vector|||1.086||
-mlraGrid_attPath|stem|a7afa2f70d3716c7|433d7b24a91bc781|b53a2d1ff7f56d28|-1439102418|data/derived/grids/Nebraska_1km_mlra.gpkg|t20396.0065185837s|s64016384b|64016384|file|local|vector|||0||
 mlraGrid_att|stem|995e2686f42474c4|29511cb0d7ab9d0c|9d91aa5b85c69469|-1701202076||t20396.0087382396s|s7088184b|7088184|rds|local|vector|||1.981||
+aoi_attPath|stem|6fdfc65e27b5f103|318fdfad0fbae971|2c530c1562a7fbd1|-1539377130|data/derived/aoi/aoi.gpkg|t20395.9436502915s|s102400b|102400|file|local|vector|||0.283||
+aoi_att|stem|cdbe25495cf9f934|12188f504be0c913|0e6987f60fa77c99|1965033546||t20396.01017439s|s5196b|5196|rds|local|vector|||0.028||
+lower48MLRA|stem|dd69b0421b173099|4214434dd4eebe6e|815418dba6e6d829|748161502||t20396.8085897818s|s1485519b|1485519|rds|local|vector|||0.854|attribute variables are assumed to be spatially constant throughout all geometries|
+downloadTigrisCounties|function|a0f99e52f66acbac
+filterCountiesToLower48|function|af0de614e0adbae5
+processMLRA|function|cba481c57706a95f
+processLower48|function|ade0ee29880e3f8e
+generateLRR|function|38bbaf9688b715ca
+buildAGrid|function|60ea3761e3819408
+lower48Extent|function|839ee73afcb69b0f
+downloadRawStates|function|21b2c58fe5456b5e
+saveGeopackageSF|function|4fe187488f06183e
+selectAOI100km|stem|05f7821b6ce8a2f0|e7dd20b12ad8cf61|a861e5f6bce371bd|-823311553||t20396.956684358s|s1712b|1712|rds|local|vector|||0.069||
 cropGridsLRR|function|e368700856091336
 cropGridsMLRA|function|38db6193d70c94ca
 buildGrids|function|60ea3761e3819408
-select100km|function|7044b3744c41ac96
+select100km|function|183e34a064577944
 cropToAOI|function|cf5139e22450e984
 buildSubGrids|function|b3ef07bce0bf9530
-aoi_attPath|stem|6fdfc65e27b5f103|318fdfad0fbae971|2c530c1562a7fbd1|-1539377130|data/derived/aoi/aoi.gpkg|t20395.9436502915s|s102400b|102400|file|local|vector|||0.283||
-aoi_att|stem|cdbe25495cf9f934|12188f504be0c913|0e6987f60fa77c99|1965033546||t20396.01017439s|s5196b|5196|rds|local|vector|||0.028||
+grid12_Path|stem|5873a6716ce37c53|0c787114e2aab9a3|2c530c1562a7fbd1|-1585428400|data/raw/grid12M/twelve_mi_grid_uid.gpkg|t20396.9596500183s|s266240b|266240|file|local|vector|||0.298||
+grid12|stem|e00e2d6681e317c7|b08e71e240fead37|4620b9df5484e40d|746365209||t20396.9617988695s|s13109b|13109|rds|local|vector|||0.034||
+cotPaths|stem|116f2be45f94ac2e|53b6452a7344d42f|55683bfc04ab6304|1749298258||t20396.9654490764s|s7522b|7522|rds|local|vector|||0.529||
+riparian|stem|78d86de6f96d2763|0c9490d09f997129|b0e0a653aea19bde|-595948123||t20396.9692615127s|s102813084b|102813084|format_custom&read=dGVycmE6OnJhc3QocGF0aCk&write=ewogICAgZG8uY2FsbCh0ZXJyYTo6d3JpdGVSYXN0ZXIsIGMobGlzdChvYmplY3QsIGZpbGVuYW1lID0gcGF0aCwgCiAgICAgICAgZmlsZXR5cGUgPSAiR1RpZmYiLCBvdmVyd3JpdGUgPSBUUlVFLCBnZGFsID0gTlVMTCksIGxpc3QoKSkpCn0&marshal=dGVycmE6OndyYXAob2JqZWN0KQ&unmarshal=dGVycmE6OnVud3JhcChvYmplY3Qp&convert=&copy=&repository=|local|list|||0.305||
+mlraGrid_attPath|stem|a7afa2f70d3716c7|433d7b24a91bc781|8369bb0f5b4fcc3c|-1439102418|data/derived/grids/Nebraska_1km_mlra.gpkg|t20396.0065185837s|s64016384b|64016384|file|local|vector|||0||
+config_file|stem|ac7821ddfeae23d7|c46c76ca6afbdca9|2c530c1562a7fbd1|-615108176|_target_config.yml|t20396.9754576389s|s85b|85|file|local|vector|||0.28||
+config|stem|1caeea4acc0ba12d|a8e842b5a57e39b7|17fbd979d3b5fcdf|-1931060652||t20396.9756140852s|s121b|121|rds|local|vector|||0.001|incomplete final line found on '_target_config.yml'|
+roads|stem|2a3fdc5cb783651b|07f50034a0bbc20f|0e0f1ac04a9dec7a|1038729194||t20396.9789304261s|s2957042b|2957042|rds|local|vector|||16.541||
+nlcd_2020|stem|a959940c47e0c5e2|52de226d9d39820a|7b2bee7260d2a7e7|1548700523||t20396.984402784s|s918317b|918317|rds|local|vector|||10.742||
+nlcd_2010|stem|a959940c47e0c5e2|1a27a489c80e5780|7b2bee7260d2a7e7|1753760817||t20396.9845333814s|s918317b|918317|rds|local|vector|||10.569||
+nlcd_2016|stem|a959940c47e0c5e2|8b861b82d771fbcf|7b2bee7260d2a7e7|-946987962||t20396.9846671373s|s918317b|918317|rds|local|vector|||10.762||
+mlraPath_att|stem|efd552c189ff9d18|a38463eaa115b007|8369bb0f5b4fcc3c|-736340712|data/derived/mlra/Nebraska_MLRA.gpkg|t20395.9749038724s|s147456b|147456|file|local|vector|||0||
+mlraAtt|stem|d0831d74591b912e|70adbbe8aefbfb69|85d3f72085a2a024|-714179438||t20396.9912682089s|s147456b|147456|format_custom&read=ewogICAgaWYgKCJHUEtHIiA9PSAiRVNSSSBTaGFwZWZpbGUiKSB7CiAgICAgICAgdGVycmE6OnZlY3QocGFzdGUwKCIvdnNpemlwL3siLCBwYXRoLCAifSIpKQogICAgfQogICAgZWxzZSB7CiAgICAgICAgdGVycmE6OnZlY3QocGF0aCkKICAgIH0KfQ&write=ewogICAgZG8uY2FsbCh0ZXJyYTo6d3JpdGVWZWN0b3IsIGMobGlzdCh4ID0gb2JqZWN0LCBmaWxlbmFtZSA9IGlmZWxzZSgiR1BLRyIgPT0gCiAgICAgICAgIkVTUkkgU2hhcGVmaWxlIiwgeWVzID0gcGFzdGUwKHBhdGgsICIuc2h6IiksIG5vID0gcGF0aCksIAogICAgICAgIGZpbGV0eXBlID0gIkdQS0ciLCBvdmVyd3JpdGUgPSBUUlVFLCBvcHRpb25zID0gIkVOQ09ESU5HPVVURi04IiksIAogICAgICAgIGxpc3QoKSkpCiAgICBpZiAoIkdQS0ciID09ICJFU1JJIFNoYXBlZmlsZSIpIHsKICAgICAgICBmaWxlLnJlbmFtZShwYXN0ZTAocGF0aCwgIi5zaHoiKSwgcGF0aCkKICAgIH0KfQ&marshal=dGVycmE6OndyYXAob2JqZWN0KQ&unmarshal=dGVycmE6OnVud3JhcChvYmplY3Qp&convert=&copy=&repository=|local|list|||0.023|GDAL Message 1: The filename extension should be 'gpkg' instead of '' to conform to the GPKG specification.|
+gatherRoads|function|3be2d2048c0ff511
+.Random.seed|object|f260461b1cb4831e
+gatherTOF_Files|function|c482fa9dd7cdb1fd
+gatherRiparian|function|44d6e3f6c8db9da8
+gatherNLCD|function|396f1cbb81fb3068
+gatherRoads|function|3be2d2048c0ff511
+calculateRiparianByMLRA|function|88cd34a3d161b20a
+.Random.seed|object|e0b6ace319d5c449
+gatherTOF_Files|function|c482fa9dd7cdb1fd
+gatherRiparian|function|44d6e3f6c8db9da8
+gatherNLCD|function|396f1cbb81fb3068
