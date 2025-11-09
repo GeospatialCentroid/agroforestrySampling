@@ -304,6 +304,10 @@ processSubGridAreas <- function(grid_feature, raster_layer, current_mlra_id) {
   grid_feature$gridArea <- terra::expanse(grid_feature, unit = "km")
   # temp id for join data back too
   grid_feature$ID <- 1:nrow(grid_feature)
+  # coditon for the class of the raster_layer object
+  if (class(raster_layer) == "character") {
+    raster_layer <- terra::rast(raster_layer)
+  }
 
   # spatial filter the raster data
   rastVals <- raster_layer |>

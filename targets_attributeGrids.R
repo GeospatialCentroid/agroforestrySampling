@@ -25,7 +25,7 @@ tar_option_set(
     "tibble",
     "tidyr"
   ),
-  controller = crew::crew_controller_local(workers = 4)
+  controller = crew::crew_controller_local(workers = 2)
 )
 
 # Source the functions (which we will also rename)
@@ -85,6 +85,12 @@ list(
     name = cotPaths,
     command = gatherTOF_Files()
   ),
+  # riparian raster path
+  tar_target(
+    name = riparianPath,
+    command = "/home/dune/trueNAS/work/Agroforestry/data/products/riparian/nebraskaRiparian10.tif",
+    format = "file"
+  ),
   # riparian raster
   tar_terra_rast(
     name = riparian,
@@ -129,37 +135,37 @@ list(
     command = terra::vect(mlraPath_att)
   ),
   # Calculate riparian area by MLRA (all 15 features)
-  tar_target(
-    name = riparian_by_mlra,
-    command = calculateRastByMLRA(
-      rast = riparian,
-      mlra_vect = mlraAtt
-    )
-  ),
-  # Calculate nlcd area by MLRA (all 15 features)
-  tar_target(
-    name = nlcd10_by_mlra,
-    command = calculateRastByMLRA(
-      rast = nlcd_2010,
-      mlra_vect = mlraAtt
-    )
-  ),
-  # Calculate nlcd area by MLRA (all 15 features)
-  tar_target(
-    name = nlcd16_by_mlra,
-    command = calculateRastByMLRA(
-      rast = nlcd_2016,
-      mlra_vect = mlraAtt
-    )
-  ),
-  # Calculate nlcd area by MLRA (all 15 features)
-  tar_target(
-    name = nlcd20_by_mlra,
-    command = calculateRastByMLRA(
-      rast = nlcd_2020,
-      mlra_vect = mlraAtt
-    )
-  ),
+  # tar_target(
+  #   name = riparian_by_mlra,
+  #   command = calculateRastByMLRA(
+  #     rast = riparian,
+  #     mlra_vect = mlraAtt
+  #   )
+  # ),
+  # # Calculate nlcd area by MLRA (all 15 features)
+  # tar_target(
+  #   name = nlcd10_by_mlra,
+  #   command = calculateRastByMLRA(
+  #     rast = nlcd_2010,
+  #     mlra_vect = mlraAtt
+  #   )
+  # ),
+  # # Calculate nlcd area by MLRA (all 15 features)
+  # tar_target(
+  #   name = nlcd16_by_mlra,
+  #   command = calculateRastByMLRA(
+  #     rast = nlcd_2016,
+  #     mlra_vect = mlraAtt
+  #   )
+  # ),
+  # # Calculate nlcd area by MLRA (all 15 features)
+  # tar_target(
+  #   name = nlcd20_by_mlra,
+  #   command = calculateRastByMLRA(
+  #     rast = nlcd_2020,
+  #     mlra_vect = mlraAtt
+  #   )
+  # ),
   # calculate roads in each MLRA
   tar_target(
     name = roads_by_mlra,
@@ -182,31 +188,44 @@ list(
     unique(mlraGrid_att$MLRA_ID)
   ),
   # map over riparian
+  ## getting a lot of no 1 values... evaluate why and rerun
   tar_target(
     ripArea_sugGrids,
     processSubGridAreas(
-      raster_layer = riparian,
+      raster_layer = riparianPath,
+      grid_feature = mlraGrid_att,
+      current_mlra_id = mlra_id_list
+    ),
+    pattern = map(mlra_id_list)
+  ),
+  # map over branches for NlCD2010
+  tar_target(
+    nlcd_10_sugGrids,
+    processSubGridAreas(
+      raster_layer = nlcd_2010,
+      grid_feature = mlraGrid_att,
+      current_mlra_id = mlra_id_list
+    ),
+    pattern = map(mlra_id_list)
+  ),
+  # map over nlcd 2016
+  tar_target(
+    nlcd_16_sugGrids,
+    processSubGridAreas(
+      raster_layer = nlcd_2016,
+      grid_feature = mlraGrid_att,
+      current_mlra_id = mlra_id_list
+    ),
+    pattern = map(mlra_id_list)
+  ),
+  # map over nlcd 2020
+  tar_target(
+    nlcd_20_sugGrids,
+    processSubGridAreas(
+      raster_layer = nlcd_2020,
       grid_feature = mlraGrid_att,
       current_mlra_id = mlra_id_list
     ),
     pattern = map(mlra_id_list)
   )
-  # # map over branches for NlCD2010
-  # tar_target(
-  #   nlcd_10_sugGrids,
-  #   processSubGridAreas(raster_layer = nlcd_2010, grid_feature = mlra_groups),
-  #   pattern = map(mlra_groups)
-  # ),
-  # # map over nlcd 2016
-  # tar_target(
-  #   nlcd_16_sugGrids,
-  #   processSubGridAreas(raster_layer = nlcd_2016, grid_feature = mlra_groups),
-  #   pattern = map(mlra_groups)
-  # ),
-  # # map over nlcd 2020
-  # tar_target(
-  #   nlcd_20_sugGrids,
-  #   processSubGridAreas(raster_layer = nlcd_2020, grid_feature = mlra_groups),
-  #   pattern = map(mlra_groups)
-  # ),
 )
