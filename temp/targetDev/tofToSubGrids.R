@@ -1,4 +1,4 @@
-pacman::p_load(terra,targets,purrr,dplyr,sf)
+pacman::p_load(terra,targets,purrr,dplyr,sf,readr)
 
 
 # workflow 
@@ -54,13 +54,21 @@ dg2 <- purrr::map(
 )
 
 relationTable <- bind_rows(dg2)
-gridIDs <- unique(relationTable$g12_id)
-gridID <- gridIDs[1]
-sel_MLRA <- mlraSG
-grid_12 <- grid12
+# gridIDs <- unique(relationTable$g12_id)
+# gridID <- gridIDs[1]
+# sel_MLRA <- mlraSG
+# grid_12 <- grid12
 tofAreaToSubGrid <- function(gridID, relationTable, grid_12, sel_MLRA ){
+  #convert to vector 
+  # sel_MLRA <- terra::vect(sel_MLRA)
+  # filter sub grids 
+  sg2 <- relationTable |>
+    dplyr::filter(g12_id == gridID)
+  # select all sub grid features 
+  sg3 <- sel_MLRA[sel_MLRA$id %in% sg2$subGridID, ]
+  
   # export
-  export <- paste0("temp/subGridTOF/gridID_",gridID,".csv")
+  export <- paste0("temp/subGridTOF/gridID_",gridID,"_mlra_",sg2$MLRA_ID[1],".csv")
   
   if(!file.exists(export)){
     # convert to terra 
@@ -74,7 +82,7 @@ tofAreaToSubGrid <- function(gridID, relationTable, grid_12, sel_MLRA ){
     
     
     # add an area column 
-    sg3$area <- terra::expanse(sg3)
+    sg3$gridArea <- terra::expanse(sg3, unit = "km")
     # generate an ID column to join back too 
     sg3$ID <- 1:nrow(sg3)
     
@@ -124,226 +132,26 @@ tofAreaToSubGrid <- function(gridID, relationTable, grid_12, sel_MLRA ){
 
 
 
-
-
-
-vals <- purrr::map(
-  .x = c("X12-660", "X12-660"),
-  .f = ~ tofAreaToSubGrid(
-    gridID = .x,  # .x is the current value (660, then 662)
-    relationTable = relationTable,
-    grid_12 = grid12,
-    sel_MLRA = mlraSG
-  )
-)
-
-# summarize and aggregate
-output <- vals |>
-  dplyr::bind_rows()|>
-  group_by(id) %>%
-  dplyr::summarize(
-    # Sum these columns
-    gridArea = sum(gridArea, na.rm = TRUE),
-    tof2010_sum = sum(tof2010_sum, na.rm = TRUE),
-    tof2016_sum = sum(tof2016_sum, na.rm = TRUE),
-    tof2020_sum = sum(tof2020_sum, na.rm = TRUE),
-    # Keep the first value of this one
-    ID = first(ID)
-  ) %>%
-  ungroup()
-
-for(i in unique(ex1$g12_id)){
-  # filter sub grids 
-  sg2 <- ex1 |>
-    dplyr::filter(g12_id == i)
-  # select all sub grid features 
-  sg3 <- selMLRA[sg2$subGridID, ]
-  rm(sg2)
-  # generate an ID column to join back too 
-  sg3$ID <- 1:nrow(sg3)
-  gridsDF <- as.data.frame(sg3)
-  # grab rasters 
-  p1 <- cotPaths[grepl(pattern = paste0("/X12-", i,"_"), cotPaths)]
-  # read in features 
-  # generate and crop raster 
-  r1 <- terra::rast(p1) |>
-    terra::crop(sg3)|>
-    terra::mask(sg3)
-  rm(p1)
-  
-  names(r1) <- c("tof2010","tof2016","tof2020")
-  # remove all zeros 
-  r1[r1 ==0, ] <- NA
-  # Generate single area feature 
-  area <- terra::cellSize(r1[[1]], unit = "km", mask = FALSE) 
-  # multiple the TOF features by area 
-  r2 <- r1 *area
-  rm(r1, area)
-  
-  # extract TOF to subgrids this is the intesive part 
-  tofExt <- terra::extract(x = r2, y = sg3)
-  rm(r2, sg3)
-  gc()
-  
-  # format 
-  tofFormat <- tofExt |>
-    group_by(ID) %>%
-    summarize(
-      # The 'across' function here applies the sum function
-      # one column at a time. It does not mix them.
-      across(
-        c("tof2010","tof2016","tof2020"), 
-        ~ sum(.x, na.rm = TRUE),
-        # This creates names like "X12-660_2010_sum"
-        .names = "{.col}_sum"
-      )
+for(i in c(72,77)){
+  print(i)
+  #filtering to single mlra 
+  relationTable1 <- relationTable[relationTable$MLRA_ID == i, ]
+  # run process
+  vals <- purrr::map(
+    .x = relationTable1$g12_id,
+    .f = ~ tofAreaToSubGrid(
+      gridID = .x,  # .x is the current value (660, then 662)
+      relationTable = relationTable1,
+      grid_12 = grid12,
+      sel_MLRA = mlraSG
     )
-  rm(tofExt)
-  gc()
-  # join to grids 
-  results <- gridsDF |>
-    dplyr::left_join(tofFormat, by ="ID")
-  # export for tonight 
-write_csv(results, paste0("temp/subGridTOF/"))
+  )
   
-  return(results)
+  
 }
 
 
 
 
-
-# iterate over the sub grids 
-sub_ids <- 1:nrow(selMLRA)
-for(i in sub_ids){
-  # select the spatial object 
-  sub <- selMLRA[i,]
-  # filter the spatial relationship data 
-  ex2 <- ex1 |>
-    dplyr::filter(subGridID == i)
-  # use the g12_id to grab all exptect images 
-  rasts <- 
-  if(nrow(ex2)>1){
-    for(j in ex2$g12_id){
-      
-    }
-  }else{
-    p1 <- cotPaths[grepl(pattern = paste0("/X12-", ex2$g12_id,"_"), cotPaths)]
-    # generate and crop raster 
-    r1 <- terra::rast(p1) |>
-      terra::crop(sub)|>
-      terra::mask(sub)
-    
-    # convert the rast to area measures
-    rast_cell_areas <- terra::cellSize(r1, unit = "km") |>
-      terra::mask(r1)
-    # extract the areas
-    extractAreas <- terra::extract(
-      rast_cell_areas,
-      sub
-    )
-    names(extractAreas) <-c("ID", paste0(names(r1), "_area"))
-    
-    rm(rast_cell_areas)
-    # extract values from raster object
-    extractVals <- terra::extract(
-      r1,
-      sub
-    ) |>
-      dplyr::mutate(area = extractAreas$area)
-    rm(rastVals)
-    # join results 
-    
-    # summarize by id
-    
-    # determine the
-    class_counts <- extractVals |>
-      dplyr::group_by(ID, class) |>
-      dplyr::summarise(
-        totalCount = n(),
-        valArea = sum(area, na.rm = TRUE),
-        .groups = "drop"
-      )
-    rm(extractVals)
-  }
-
-}
-
-
-
-
-
-
-
-
-
-
-# get the area of features
-grid_feature <- terra::vect(grid_feature)
-grid_feature$gridArea <- terra::expanse(grid_feature, unit = "km")
-# temp id for join data back too
-grid_feature$ID <- 1:nrow(grid_feature)
-# coditon for the class of the raster_layer object
-if (class(raster_layer) == "character") {
-  raster_layer <- terra::rast(raster_layer)
-}
-
-# spatial filter the raster data
-rastVals <- raster_layer |>
-  terra::crop(grid_feature) |>
-  terra::mask(grid_feature)
-rm(raster_layer)
-# convert the rast to area measures
-rast_cell_areas <- terra::cellSize(rastVals, unit = "km") |>
-  terra::mask(rastVals)
-# extract the areas
-extractAreas <- terra::extract(
-  rast_cell_areas,
-  grid_feature
-)
-rm(rast_cell_areas)
-# extract values from raster object
-extractVals <- terra::extract(
-  rastVals,
-  grid_feature
-) |>
-  dplyr::mutate(area = extractAreas$area)
-rm(rastVals)
-names(extractVals) <- c("ID", "class", "area")
-# summarize by id
-
-# determine the
-class_counts <- extractVals |>
-  dplyr::group_by(ID, class) |>
-  dplyr::summarise(
-    totalCount = n(),
-    valArea = sum(area, na.rm = TRUE),
-    .groups = "drop"
-  )
-rm(extractVals)
-gc()
-
-# add the area of the id
-wide_df <- class_counts |>
-  pivot_wider(
-    id_cols = ID,
-    names_from = class,
-    values_from = c(totalCount, valArea),
-    values_fill = 0 # Optional: replaces NA with 0
-  )
-# join this back to the mlra File and export
-export <- grid_feature |>
-  as.data.frame() |>
-  dplyr::left_join(wide_df, by = "ID") %>%
-  dplyr::mutate(across(
-    .cols = starts_with("valArea_"),
-    .fns = ~ (.x / gridArea) * 100,
-    .names = gsub("valArea", "percentArea", "{.col}")
-  )) |>
-  rowwise() |>
-  mutate(
-    totalPercentArea = sum(c_across(starts_with("valArea_")))
-  ) |>
-  ungroup()
 
 
