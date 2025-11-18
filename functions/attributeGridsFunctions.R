@@ -368,3 +368,37 @@ processSubGridAreas <- function(grid_feature, raster_layer, current_mlra_id) {
     ungroup()
   return(export)
 }
+
+
+# spatial relationship between subgrids and 12 mile grid ------------------
+## a little limited as the mlra index will be unique to this feature 
+
+defineGridRelationships <- function(mlraID, mlra_subGrids, grid_12, cot_paths){
+  # conver to terra vect 
+  grid_12 <- terra::vect(grid_12)
+  # select grids of interest
+  selMLRA <- terra::vect(mlra_subGrids[mlra_subGrids$MLRA_ID == mlraID,])
+  # assign area to selMLRA 
+  selMLRA$gridArea <-terra::expanse(selMLRA, unit = "km")
+  
+  # attribute all grid ids to unique 1km grids 
+  ex1 <- terra::relate(x = grid_12, y = selMLRA,relation = "intersects", pairs = TRUE ) |>
+    as.data.frame() 
+  # use the row indexs to construct a dataframe with proper reference values 
+  # grid12 ids 
+  base_ids <- grid_12$Unique_ID[ex1[, 1]]
+  # subGrid ids 
+  source_ids <- selMLRA$id[ex1[, 2]]
+  
+  # This table maps every single intersection
+  id_lookup_table <- data.frame(
+    g12_id = base_ids,
+    subGridID = source_ids
+  ) |>
+    dplyr::mutate(MLRA_ID = mlraID)
+  # export the object 
+  return(id_lookup_table)
+}
+s
+
+

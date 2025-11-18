@@ -227,5 +227,16 @@ list(
       current_mlra_id = mlra_id_list
     ),
     pattern = map(mlra_id_list)
+  ),
+  # generate intersection between 12 mile grid and sub grid features 
+  tar_target(
+    name = mlraSub_to12Mile,
+    command = defineGridRelationships(
+      mlraID = mlra_id_list, # This 'mlra_id_list' name triggers the mapping
+      mlra_subGrids = mlraGrid_att,
+      grid_12 = grid12,
+      cot_paths = cotPaths
+    ),
+    pattern = map(mlra_id_list) # This tells targets to branch
   )
 )
