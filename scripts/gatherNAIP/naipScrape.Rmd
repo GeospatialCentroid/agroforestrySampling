@@ -1,0 +1,381 @@
+---
+title: "NAIP Imagery Acquisition Workflow"
+author: "Geospatial Centroid"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
+    code_folding: show
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# Overview
+
+This workflow provides a standalone pipeline to acquire and standardize **National Agriculture Imagery Program (NAIP)** data from the Microsoft Planetary Computer.
+
+**Workflow Steps:**
+1.  **AOI Generation:** Identifies a 1km processing block based on a user-provided coordinate or Grid ID using a hierarchical grid system (100km -> 1km).
+2.  **STAC Query:** Queries the Microsoft Planetary Computer STAC API to identify available NAIP years for the AOI.
+3.  **Download:** Retreives the imagery (TIFF) for a selected year.
+4.  **Standardization:** Resamples imagery to 1m resolution and reprojects to WGS84.
+
+# 1. Environment Setup
+
+Loading required geospatial and API interaction libraries.
+
+```{r libs}
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  rstac,    # SpatioTemporal Asset Catalog (STAC) API client
+  sf,       # Vector data handling
+  terra,    # Raster data handling
+  dplyr,    # Data manipulation
+  tmap,     # Visualization
+  rlang,    # Low-level API for programming with R
+  httr,     # HTTP requests for downloading
+  stringr,  # String manipulation
+  purrr     # Functional programming
+)
+
+tmap_mode("view")
+```
+
+# 2. Helper Functions
+
+The following functions handle the logic for grid generation, STAC API querying, and raster processing.
+
+## Grid Generation Logic
+
+These functions construct the hierarchical grid system. This relies on **EPSG:5070 (Conus Albers)** to ensure equal-area grid cells during subdivision.
+
+```{r grid_funcs}
+#' Build Grids
+#' Generates a grid based on a specific cell size within an extent.
+#' @param extent_object An sf object defining the boundary.
+#' @param cell_size Numeric. Size of the grid cell in map units (meters).
+buildGrids <- function(extent_object, cell_size) {
+  # transform to equal area (Conus Albers)
+  ea <- sf::st_transform(extent_object, 5070)
+  
+  # generate grid
+  grid <- sf::st_make_grid(
+    x = ea,
+    cellsize = cell_size
+  )
+  
+  # Generate Hex IDs
+  if ("id" %in% names(ea)) {
+    ids <- paste0(ea$id[1], "-", as.hexmode(1:length(grid)))
+  } else {
+    ids <- as.hexmode(1:length(grid))
+  }
+  
+  # Create sf object
+  gridID <- sf::st_sf(
+    id = ids,
+    geometry = grid # Fixed typo from original 'geomentry'
+  )
+  
+  return(gridID)
+}
+
+#' Build Sub Grids
+#' recursively splits grids into smaller units.
+buildSubGrids <- function(grids, cell_size, aoi) {
+  # generate sub grids via map
+  subGrids <- grids |>
+    dplyr::group_split(id) |>
+    purrr::map(.f = buildGrids, cell_size = cell_size) |>
+    dplyr::bind_rows()
+  
+  # Spatial filter to keep only grids within the AOI
+  subGrids <- subGrids[aoi, ]
+  
+  return(subGrids)
+}
+```
+
+## AOI Selection Logic
+
+This function serves as the primary entry point for defining the area of interest. It handles the drill-down logic from the parent 100km grid to the target 1km grid using either a spatial point intersection or a string ID parse.
+
+```{r aoi_func}
+#' Get AOI
+#' Derives the specific 1km grid cell from a larger 100km grid using a point or ID.
+#' @param grid100 The master 100km grid sf object.
+#' @param point A numeric vector c(lon, lat) or FALSE.
+#' @param id A character string representing the grid ID or FALSE.
+getAOI <- function(grid100, point = FALSE, id = FALSE) {
+  
+  # --- Strategy 1: Lat/Lon Input ---
+  if (!isFALSE(point)) {
+    message("Grabbing AOI based on Lat/Lon value...")
+    
+    # Generate point object and transform to Albers
+    pointFeature <- sf::st_point(point) |>
+      sf::st_sfc(crs = "EPSG:4326") |> 
+      sf::st_transform(crs = "EPSG:5070")
+    
+    # Intersect with 100km grid to find parent ID
+    gid <- grid100[pointFeature, ] |> 
+      as.data.frame() |>
+      dplyr::pull("id")
+    
+    # Filter master grid
+    g1 <- grid100[grid100$id == gid, ]
+    
+    # Iterative drill down (100k -> 50k -> 10k -> 2k -> 1km)
+    # Note: This generates grids on the fly for the specific area
+    t1 <- buildSubGrids(grids = g1, cell_size = 50000, aoi = g1)[pointFeature, ]
+    t2 <- buildSubGrids(grids = t1, cell_size = 10000, aoi = t1)[pointFeature, ]
+    t3 <- buildSubGrids(grids = t2, cell_size = 2000, aoi = t2)[pointFeature, ]
+    t4 <- buildSubGrids(grids = t3, cell_size = 1000, aoi = t3)[pointFeature, ]
+    
+    return(t4)
+  }
+  
+  # --- Strategy 2: String ID Input ---
+  if (!isFALSE(id)) {
+    message("Grabbing AOI based on ID...")
+    
+    # Parse ID string (e.g., "id100-id50-id10-id2-id1")
+    ids <- id |> 
+      stringr::str_split(pattern = "-") |>
+      unlist()
+    
+    # Reconstruct hierarchical IDs
+    id100 <- ids[1]
+    id50  <- paste(id100, ids[2], sep = "-")
+    id10  <- paste(id50, ids[3], sep = "-")
+    id2   <- paste(id10, ids[4], sep = "-")
+    id1   <- paste(id2, ids[5], sep = "-")
+    
+    # Drill down by filtering generated subgrids by ID
+    g1 <- grid100 |> dplyr::filter(id == id100)
+    
+    t1 <- buildSubGrids(grids = g1, cell_size = 50000, aoi = g1) |>
+      dplyr::filter(id == id50)
+      
+    t2 <- buildSubGrids(grids = t1, cell_size = 10000, aoi = t1) |>
+      dplyr::filter(id == id10)
+      
+    t3 <- buildSubGrids(grids = t2, cell_size = 2000, aoi = t2) |>
+      dplyr::filter(id == id2)
+      
+    t4 <- buildSubGrids(grids = t3, cell_size = 1000, aoi = t3) |>
+      dplyr::filter(id == id1)
+      
+    return(t4)
+  }
+  
+  if (isFALSE(point) | isFALSE(id)) {
+    message("No input provided. Please provide a value for either the point or id object")
+  }
+}
+```
+
+## STAC API Functions
+
+These functions interact with the Microsoft Planetary Computer STAC API to check metadata and download assets.
+
+```{r stac_funcs}
+#' Get NAIP Year availability
+#' Queries the STAC API to see which years have coverage for the AOI.
+getNAIPYear <- function(aoi) {
+  
+  bbox <- aoi |>
+    sf::st_transform(crs = "EPSG:4326") |>
+    sf::st_bbox()
+  
+  stac_endpoint <- "[https://planetarycomputer.microsoft.com/api/stac/v1](https://planetarycomputer.microsoft.com/api/stac/v1)"
+  con <- rstac::stac(stac_endpoint)
+  
+  message("Pulling results from STAC for AOI...")
+  search_results <- con |>
+    rstac::stac_search(
+      collections = "naip",
+      bbox = bbox,
+      limit = 200 
+    ) |>
+    rstac::get_request()
+  
+  if (length(search_results$features) == 0) {
+    stop("No NAIP imagery found for the specified AOI.")
+  }
+  
+  # Parse dates
+  all_datetimes <- rstac::items_datetime(search_results)
+  available_years <- sort(unique(substr(all_datetimes, 1, 4)))
+  
+  message("Query complete. NAIP available for years:")
+  print(available_years)
+}
+
+
+#' Download NAIP
+#' Signs the STAC item (required by MS Planetary Computer) and downloads the TIFF.
+downloadNAIP <- function(aoi, year, exportFolder) {
+  
+  bbox <- aoi |>
+    sf::st_transform(crs = "EPSG:4326") |>
+    sf::st_bbox()
+  
+  if (!dir.exists(exportFolder)) {
+    dir.create(exportFolder)
+  }
+  
+  time_range <- paste0(year, "-01-01T00:00:00Z/", year, "-12-31T23:59:59Z")
+  stac_endpoint <- "[https://planetarycomputer.microsoft.com/api/stac/v1](https://planetarycomputer.microsoft.com/api/stac/v1)"
+  
+  # Search
+  search_results <- rstac::stac(stac_endpoint) |>
+    rstac::stac_search(
+      collections = "naip", 
+      bbox = bbox,          
+      datetime = time_range,     
+      limit = 10
+    ) |>
+    rstac::get_request()
+  
+  if (length(search_results$features) == 0) {
+    stop("No NAIP imagery found for the specified AOI and year.")
+  }
+  
+  # Sign URL (SAS Token generation)
+  signed_items <- rstac::items_sign(
+    search_results,
+    rstac::sign_planetary_computer()
+  )
+  
+  image_url <- rstac::assets_url(signed_items, asset_names = "image")
+  basePath <- paste0(exportFolder, "/naip_", year, "_id_", aoi$id)
+  
+  # Handle download (accounting for potential multiple tiles)
+  files_downloaded <- list()
+  
+  if (length(image_url) > 1) {
+    message("Multiple images returned covering this AOI.")
+    for (i in seq_along(image_url)) {
+      dest <- paste0(basePath, "_", i, ".tif")
+      message(paste0("Downloading file ", i, " of ", length(image_url), "..."))
+      
+      httr::GET(
+        image_url[[i]],
+        httr::write_disk(dest, overwrite = TRUE),
+        httr::progress()
+      )
+      files_downloaded[[i]] <- dest
+    }
+  } else {
+    dest <- paste0(basePath, ".tif")
+    message("Downloading file...")
+    httr::GET(
+      image_url[[1]],
+      httr::write_disk(dest, overwrite = TRUE),
+      httr::progress()
+    )
+    files_downloaded[[1]] <- dest
+  }
+  
+  message("Download complete!")
+  return(unlist(files_downloaded))
+}
+```
+
+## Processing Functions
+
+Standardization of the downloaded imagery.
+
+```{r process_funcs}
+#' Standardize NAIP
+#' Sets band names, resamples to 1m resolution, and projects to WGS84.
+standardizeNAIP <- function(importPath, exportPath) {
+  
+  r1 <- terra::rast(importPath) 
+  names(r1) <- c("red", "green", "blue", "nir")
+  
+  # Visualization check (optional, prints to plot pane)
+  # terra::plotRGB(r1, r = "red", g = "green", b = "blue", stretch = "lin")
+  
+  message("Generating 1m template raster...")
+  r_template_1m <- terra::rast(
+    extent = terra::ext(r1),
+    crs = terra::crs(r1),
+    resolution = 1 
+  )
+  
+  message("Resampling image to 1m...")
+  r_new <- terra::resample(
+    r1,
+    r_template_1m,
+    method = "bilinear" 
+  )
+  
+  message("Projecting to WGS84 (EPSG:4326)...")
+  r_new_84 <- terra::project(
+    r_new,
+    "EPSG:4326",
+    method = "bilinear"
+  )
+  
+  message("Exporting to: ", exportPath)
+  terra::writeRaster(x = r_new_84, filename = exportPath, overwrite = TRUE)
+  return(exportPath)
+}
+```
+
+# 3. Workflow Execution
+
+This section demonstrates the application of the functions defined above.
+
+### Inputs
+
+**User Action Required:** Ensure `grid100km_aea.gpkg` is available in your data directory.
+
+```{r inputs, eval=FALSE}
+# Load the master 100km grid
+# NOTE: Update path as necessary
+grid100 <- sf::st_read("data/derived/grids/grid100km_aea.gpkg")
+
+# Define a test point (Nebraska example)
+point_test <- c(lon = -97.59819, lat = 42.23696)
+```
+
+### Step-by-Step Run
+
+```{r run_workflow, eval=FALSE}
+# 1. Get the specific 1km AOI from the point
+aoi <- getAOI(grid100 = grid100, point = point_test)
+
+# View location
+qtm(aoi)
+
+# 2. Check available years
+getNAIPYear(aoi = aoi)
+
+# 3. Download (Example: 2021)
+# This saves to a 'temp' folder in your working directory
+download_paths <- downloadNAIP(
+  aoi = aoi, 
+  year = 2021, 
+  exportFolder = "temp"
+)
+
+# 4. Standardize the first downloaded image
+input_file <- download_paths[1]
+output_file <- paste0("temp/naip_2021_id_", aoi$id, "_wgs84.tif")
+
+standardizeNAIP(
+  importPath = input_file,
+  exportPath = output_file
+)
+
+# 5. Verify Output
+final_rast <- terra::rast(output_file)
+terra::plotRGB(final_rast, r = 1, g = 2, b = 3, stretch = "lin")
+```
