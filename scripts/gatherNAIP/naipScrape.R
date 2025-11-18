@@ -285,8 +285,8 @@ grid100 <- sf::st_read("data/derived/grids/grid100km_aea.gpkg")
 
 
 # testing 
-point <- c(lon = -115.08, lat = 48.58)
-id <- test1km$id
+point <- c(lon = -97.59819236732471, lat = 42.236962949995366)
+
 
 
 # workflow ----------------------------------------------------------------
