@@ -229,42 +229,42 @@ downloadNAIP <- function(aoi, year, exportFolder) {
 }
 
 
-# so for the mosiac methodology, I thing we can pass in the gridID and year and use that to select all images
-# this would allow us to grel the files we want, process them then mosaic.
-
-standardizeNAIP <- function(importPath, exportPath) {
-  # read in
-  r1 <- terra::rast(importPath)
-  # assign names
-  names(r1) <- c("red", "green", "blue", "nir")
-  # test visualization
-  terra::plotRGB(r1, r = "red", g = "green", b = "blue", stretch = "lin")
-
-  # create a template raster at 1 m
-  message("generating a 1m template raster")
-  r_template_1m <- terra::rast(
-    extent = ext(r1),
-    crs = crs(r1),
+mergeAndExport <- function(files, out_path, aoi) {
+  r1 <- terra::rast(files[1])
+  # reprojecthe aoi object
+  aoi2 <- terra::project(terra::vect(aoi), crs(r1))
+  # generate a template raster 1 m
+  temp <- terra::rast(
+    extent = ext(aoi2),
+    crs = crs(aoi2),
+    nlyrs = 4,
     resolution = 1 # 1 meter
   )
-
-  # Resample the Original to the template
-  message("resampling the image to 1m ")
-  r_new <- terra::resample(
-    r1,
-    r_template_1m,
-    method = "bilinear" # "bilinear" for continuous data, "near" for categorical
-  )
-
-  # reproject to wgs 84
-  message("projecting to wgs84")
-  r_new_84 <- r_new |>
-    terra::project(
-      "EPSG:4326",
+  if (length(files) > 1) {
+    rast <- purrr::map(.x = files, .f = readAndName) |>
+      terra::sprc() |>
+      terra::mosaic(fun = "mean")
+  } else {
+    rast <- terra::rast(files)
+  }
+  # crop and resample
+  m1 <- terra::crop(rast, aoi2) |>
+    terra::resample(
+      temp,
       method = "bilinear"
     )
+  # project and export
+  terra::project(
+    x = m1,
+    y = "EPSG:4326",
+    filename = out_path,
+    overwrite = TRUE,
+    filetype = "GTiff"
+  )
+}
 
-  # export
-  message("exporting image to the export path ")
-  terra::writeRaster(x = r_new_84, filename = exportPath)
+readAndName <- function(path) {
+  r1 <- terra::rast(path)
+  names(r1) <- c("red", "green", "blue", "nir")
+  return(r1)
 }

@@ -76,30 +76,9 @@ process_naip_2mile <- function(
         pattern = paste0(year, "_id_", gridID),
         full.names = TRUE
       )
-
-      # 6. Standardize (Inner Loop)
-      export_names <- paste0(
-        stringr::str_remove(files, pattern = "\\.tif$"),
-        "_wgs84.tif"
-      )
-
-      # Map the standardization function over the downloaded files
-      purrr::walk2(.x = files, .y = export_names, .f = standardizeNAIP)
-
-      # 7. Merge and Mask
-      # Reload the standardized files
-      rasters <- terra::sprc(lapply(export_names, terra::rast))
-
-      m <- terra::merge(rasters, method = "bilinear") |>
-        terra::mask(aoi)
-
-      # Ensure output directory exists
-      dir.create(dirname(out_path), recursive = TRUE, showWarnings = FALSE)
-
-      terra::writeRaster(m, filename = out_path, overwrite = TRUE)
+      # process imagery
+      mergeAndExport(files = files, out_path = out_path, aoi = aoi)
     }
-
-    #
   } else {
     warning(paste("Year", year, "not found for Grid", gridID))
   }
@@ -114,7 +93,7 @@ process_naip_2mile <- function(
 #   .f = process_naip_2mile
 # )
 
-future::plan(multisession, workers = 4)
+future::plan(multisession, workers = 8)
 
 furrr::future_pwalk(
   .l = df,
