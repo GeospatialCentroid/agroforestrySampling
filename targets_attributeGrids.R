@@ -31,7 +31,7 @@ tar_option_set(
 # Source the functions (which we will also rename)
 source("functions/attributeGridsFunctions.R")
 
-# Define the pipeline
+  # Define the pipeline
 list(
   tar_file_read(
     name = config,

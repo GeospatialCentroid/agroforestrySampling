@@ -399,6 +399,6 @@ defineGridRelationships <- function(mlraID, mlra_subGrids, grid_12, cot_paths){
   # export the object 
   return(id_lookup_table)
 }
-s
+
 
 
