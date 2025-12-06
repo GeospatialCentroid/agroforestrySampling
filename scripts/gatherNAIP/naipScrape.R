@@ -3,7 +3,7 @@
 
 # libraries
 pacman::p_load(rstac, sf, terra, dplyr, tmap, rlang, httr, tictoc, purrr, furrr)
-tmap_mode("view")
+tmap::tmap_mode("view")
 
 source("functions/naipScrape.R")
 

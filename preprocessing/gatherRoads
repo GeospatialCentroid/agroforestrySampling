@@ -1,0 +1,57 @@
+pacman::p_load(sf, tigris, purrr)
+
+# 1. Setup
+options(tigris_use_cache = TRUE)
+output_dir <- "data/derived/roads"
+
+# Create the directory if it doesn't exist
+if (!dir.exists(output_dir)) {
+  dir.create(output_dir)
+}
+
+
+# Get counties
+ne_counties <- counties(state = "NE", year = 2020, cb = TRUE)
+
+# define funtion
+download_and_save_roads <- function(county_fp, county_name) {
+  # Create a clean filename (e.g., "ne_roads_001_Adams.gpkg")
+  # Removing spaces from county names ensures safer file paths
+  clean_name <- gsub(" ", "", county_name)
+  file_path <- file.path(
+    output_dir,
+    paste0("ne_roads_", county_fp, "_", clean_name, ".gpkg")
+  )
+
+  # Check if file already exists to allow restarting the script without duplicates
+  if (file.exists(file_path)) {
+    message(paste("Skipping", county_name, "- file already exists."))
+    return(NULL)
+  }
+
+  message(paste("Downloading roads for:", county_name, "..."))
+
+  tryCatch(
+    {
+      # Download data
+      road_data <- roads(state = "NE", county = county_fp, year = 2020)
+
+      # Save to disk immediately
+      # delete_dsn = TRUE allows overwriting if a corrupt file existed
+      st_write(road_data, file_path, quiet = TRUE, delete_dsn = TRUE)
+
+      message(paste("  -> Saved to", file_path))
+    },
+    error = function(e) {
+      message(paste("!! FAILED:", county_name, "-", e$message))
+    }
+  )
+}
+
+# run workflow
+purrr::walk2(
+  ne_counties$COUNTYFP,
+  ne_counties$NAME,
+  download_and_save_roads
+)
+message("Batch download complete.")
