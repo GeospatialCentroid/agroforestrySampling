@@ -427,6 +427,8 @@ print(cor_results)
 
 # sampling methodology  ---------------------------------------------------
 
+joinData <- read_csv("temp/allZScore_mlra80.csv")
+
 # goals
 ## - generate a R square to compare the tof and
 var(joinData$percentTOF, na.rm = TRUE)
@@ -531,8 +533,10 @@ get_neyman_allocation <- function(
   strata_col,
   target_col,
   total_n,
-  min_n = 2
+  min_n = 2,
+  splitType
 ) {
+  #
   # Calculate Neyman Statistics
   result <- data |>
     group_by({{ strata_col }}) |>
@@ -559,8 +563,9 @@ get_neyman_allocation <- function(
       # 5. Calculate final Sampling Density
       density = n_final / Nh
     ) |>
+    dplyr::mutate(split = splitType) |>
     # Clean up helper columns
-    select(-product)
+    select(group = {{ strata_col }}, everything(), -product)
 
   return(result)
 }
@@ -570,7 +575,8 @@ neyman_kmeans <- get_neyman_allocation(
   data = df,
   strata_col = group_kmeans, # Note: No quotes needed
   target_col = percentTOF,
-  total_n = 100
+  total_n = 100,
+  splitType = "kmeans"
 )
 
 # Equal Interval groups
@@ -578,98 +584,25 @@ neyman_equal <- get_neyman_allocation(
   data = df,
   strata_col = group_equal,
   target_col = percentTOF,
-  total_n = 100
+  total_n = 100,
+  splitType = "equalInterval"
 )
 # Equal counts groups
 neyman_quantile <- get_neyman_allocation(
   data = df,
   strata_col = group_quantile,
   target_col = percentTOF,
-  total_n = 100
+  total_n = 100,
+  splitType = "quantile"
 )
 # zero plus quantile counts
 neyman_zero_quantile <- get_neyman_allocation(
   data = df,
   strata_col = group_customQuantile,
   target_col = percentTOF,
-  total_n = 100
+  total_n = 100,
+  splitType = "zero_Quantile"
 )
-
-# generate a stratifed sampling methodology
-## group the 1k grids into three classes, and systematically assign a number to all features
-## sample in groups of 100
-### random initalization point then %% function to
-# get areas of all features
-
-# # group data
-# g1 <- t_df |> filter(group_kmeans == 1) |> dplyr::mutate(gID = row_number())
-# g2 <- t_df |> filter(group_kmeans == 2) |> dplyr::mutate(gID = row_number())
-# g3 <- t_df |> filter(group_kmeans == 3) |> dplyr::mutate(gID = row_number())
-
-# # want to test this 20 times so need to genereate a df that stores the test number, estimates TOF, and the pass condition
-# outputVals <- data.frame(
-#   iteration = 1:20,
-#   tofEstimate = NA
-# )
-
-# # set the randon state point
-# set.seed(1234)
-# for (i in 1:20) {
-#   # initialization location, this is the random element between iterations
-#   s1 <- sample(x = g1$gID, size = 1)
-#   s2 <- sample(x = g2$gID, size = 1)
-#   s3 <- sample(x = g3$gID, size = 1)
-
-#   # set total number
-#   t1 <- pull(density[1, "n_final"])
-#   t2 <- pull(density[2, "n_final"])
-#   t3 <- pull(density[3, "n_final"])
-
-#   # set sample interval
-#   i1 <- round(nrow(g1) / t1)
-#   i2 <- round(nrow(g2) / t2)
-#   i3 <- round(nrow(g3) / t3)
-
-#   # generate sample index
-#   sampleIndex <- function(start, interval, nSample, total) {
-#     seq1 <- seq(from = start, by = interval, length.out = nSample)
-#     final_set <- (seq1 - 1) %% total + 1
-#     return(final_set)
-#   }
-#   index1 <- sampleIndex(
-#     start = s1,
-#     interval = i1,
-#     nSample = t1,
-#     total = nrow(g1)
-#   )
-#   index2 <- sampleIndex(
-#     start = s2,
-#     interval = i2,
-#     nSample = t2,
-#     total = nrow(g2)
-#   )
-#   index3 <- sampleIndex(
-#     start = s3,
-#     interval = i3,
-#     nSample = t3,
-#     total = nrow(g3)
-#   )
-
-#   # combine all the select features
-#   sample <- bind_rows(g1[index1, ], g2[index2, ], g3[index3, ]) |>
-#     dplyr::select(-gID)
-
-#   # calculate the weighted mean of
-#   sampleRatio <- weighted.mean(
-#     x = sample$percentTOF,
-#     w = sample$areas,
-#     na.rm = TRUE
-#   )
-#   # TOF area estimate - convert to a percentage
-#   tofEstimate <- (sampleRatio / 100) * totalArea
-#   # store results
-#   outputVals$tofEstimate[i] <- tofEstimate
-# }
 
 # function for running the group stratified sample
 get_circular_indices <- function(start, interval, n_sample, total_rows) {
@@ -677,36 +610,48 @@ get_circular_indices <- function(start, interval, n_sample, total_rows) {
   # The modulo math to wrap around
   return((raw_seq - 1) %% total_rows + 1)
 }
+# funtion for assigning the number of features to test in the iteration
+increase_sample_size <- function(data, multiplier) {
+  data %>%
+    mutate(
+      # Multiply n_final by the input
+      # pmin() ensures the result never exceeds the value in Nh
+      n_final = pmin(n_final * multiplier, Nh)
+    )
+}
 
+
+# single dataset run  ----------------------------------------------------
 # 2. Main Simulation Function
 run_neyman_simulation <- function(
   data,
   allocation_df,
   total_area,
-  iterations = 20,
+  iterations,
   seed = 1234,
   nth
 ) {
   set.seed(seed)
   # alter the total sample based on the iteration of the loop
-  allocation_df$n_final <- allocation_df$n_final * nth
-
-  # PRE-PROCESSING:
+  allocation_df <- increase_sample_size(data = allocation_df, multiplier = nth)
+  # funtion to assing the
   # Join the allocation target (n_final) to the main data
-  # and split into a list of dataframes (one per group).
-  # This replaces the manual g1, g2, g3 creation.
   grouped_list <- data %>%
     inner_join(
-      allocation_df[, c("group_kmeans", "n_final")],
-      by = "group_kmeans"
+      # Select dynamic column and n_final
+      allocation_df %>% select(group, n_final),
+      # Join using the string version of the name
+      by = "group"
     ) %>%
-    group_by(group_kmeans) %>%
+    # Group by the dynamic column
+    group_by(group) %>%
     mutate(
-      gID = row_number(), # Create ID specific to the group
-      n_total = n() # Store total count of this group
+      gID = row_number(),
+      n_total = n()
     ) %>%
     ungroup() %>%
-    group_split(group_kmeans) # Returns a list: [[1]]=g1, [[2]]=g2, etc.
+    # Split by the dynamic column
+    group_split(group)
 
   # SIMULATION LOOP:
   # map_dfr is a clean tidyverse alternative to the 'for' loop
@@ -747,8 +692,20 @@ run_neyman_simulation <- function(
   return(results)
 }
 
+df2 <- df_t
 
-# filter the k1 data to exclude any feautures that had NA for previous measure value
+data <- run_neyman_simulation(
+  data = df_t,
+  allocation_df = neyman_kmeans,
+  total_area = totalArea,
+  iterations = 20,
+  nth = 10
+)
+
+
+# Itorative runs over all the datasets  ----------------------------------
+
+# filter the k1 data to exclude any feautures that 0had NA for previous measure value
 k2 <- k1[!k1$id %in% removedGrids$gridID, ]
 
 k2$areas <- terra::expanse(k2, unit = "km")
@@ -758,16 +715,16 @@ totalArea <- sum(k2$areas, na.rm = TRUE)
 # simplified version for joining to sample data
 k3 <- k2 |> as.data.frame() |> dplyr::select(id, areas)
 
-# input data for sampleing
-t_df <- df |>
-  dplyr::select(gridID, percentTOF, Forest, group_kmeans) |>
-  dplyr::left_join(y = k3, by = c("gridID" = "id"))
+# remove the na columns from the df
+df_t <- df |>
+  dplyr::filter(!gridID %in% removedGrids$gridID) |>
+  dplyr::left_join(k3, by = c("gridID" = "id"))
 
 # total percent TOF
 # calculate the weighted mean of
 fullRatio <- weighted.mean(
-  x = t_df$percentTOF,
-  w = t_df$areas,
+  x = df_t$percentTOF,
+  w = df_t$areas,
   na.rm = TRUE
 )
 # TOF area estimate - convert to a percentage
@@ -777,35 +734,73 @@ low <- tofMeasured - tenPercent
 high <- tofMeasured + tenPercent
 
 # only want to run up to divisable iterations of 100
-runMax <- floor(nrow(t_df) / 100)
+runMax <- floor(nrow(df_t) / 100)
 successfulRuns <- c()
-for (i in 1:runMax) {
-  print(i)
-  # Run the simulation
-  outputVals <- run_neyman_simulation(
-    data = t_df,
-    allocation_df = neyman_kmeans,
-    total_area = totalArea,
-    iterations = 20,
-    nth = i
-  )
-  # assgin inrange test
-  ranges <- outputVals |>
-    dplyr::mutate(
-      inRange = case_when(
-        tofEstimate >= low & tofEstimate <= high ~ TRUE,
-        TRUE ~ FALSE
-      )
-    )
+runIterations <- 20
 
-  # conditional to alter the workflow
-  if (sum(ranges$inRange) >= 16) {
-    successfulRuns <- c(successfulRuns, i)
-  } else {
-    # alter the sample number and repeat
+
+data_list <- list(
+  equal = list(data = neyman_equal, name = "group_equal"),
+  kmeans = list(data = neyman_kmeans, name = "group_kmeans"),
+  quantile = list(data = neyman_quantile, name = "group_quantile"),
+  zeroQuantile = list(
+    data = neyman_zero_quantile,
+    name = "group_customQuantile"
+  )
+)
+
+
+runSampling_neyman <- function(data_list, tofDF, runIterations) {
+  # data
+  data <- data_list
+
+  #  run the method for the specific dataset
+  method <- data$name
+  valsDF <- data$data
+  # set the number of possible runs based on rows in tofDF
+  runMax <- floor(nrow(tofDF) / 100)
+  # filter the group df to the specific method
+  df2 <- tofDF |>
+    dplyr::select(
+      "gridID",
+      "percentTOF",
+      "Forest",
+      group = {{ method }},
+      "areas"
+    )
+  resultsDF <- data.frame(
+    runNumber = 1:runMax,
+    percentTRUE = NA,
+    method = method
+  )
+  for (i in 1:runMax) {
+    # set.seed(i)
+    print(i)
+    # Run the simulation
+    outputVals <- run_neyman_simulation(
+      data = df2,
+      allocation_df = valsDF,
+      total_area = totalArea,
+      iterations = runIterations,
+      nth = i
+    )
+    # assgin inrange test
+    ranges <- outputVals |>
+      dplyr::mutate(
+        inRange = case_when(
+          tofEstimate >= low & tofEstimate <= high ~ TRUE,
+          TRUE ~ FALSE
+        )
+      )
+    # store the results of the process
+    resultsDF$percentTRUE[i] <- (sum(ranges$inRange) / runIterations) * 100
   }
+  return(resultsDF)
 }
 
-
-# View results
-head(outputVals)
+results2 <- purrr::map_dfr(
+  .x = data_list,
+  .f = runSampling_neyman,
+  tofDF = df_t,
+  runIterations = 20
+)
