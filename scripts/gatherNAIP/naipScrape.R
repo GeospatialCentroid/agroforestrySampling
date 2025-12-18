@@ -102,16 +102,37 @@ furrr::future_pwalk(
 )
 
 # workflow ----------------------------------------------------------------
-# aoi <- getAOI(grid100 = grid100, point = point)
-# qtm(aoi)
+point <- c(-99.55915251753592,40.24362217062013)
+aoi <- getAOI(grid100 = grid100, point = point)
+qtm(aoi)
+# 
+# test for year
+getNAIPYear(aoi = aoi)
 
-# # test for year
-# getNAIPYear(aoi = sel2)
+# set year 
+year <- "2020"
+exportFolder <- "temp"
+gridID <- aoi$id
 
 # # download naip
-# downloadNAIP(aoi = sel2, year = 2020, exportFolder = "temp")
+downloadNAIP(aoi = aoi, year = 2020, exportFolder = exportFolder)
+# files 
+files <- list.files(
+  "temp",
+  pattern = paste0(year, "_id_", gridID),
+  full.names = TRUE
+) 
 
-# r1 <- terra::rast("temp/naip_2021_id_1998-3-12-4-4.tif")
+message(paste("Processing Grid:", gridID, "Year:", year))
+out_path <- paste0(
+  "data/derived/naipExports/naip_",
+  year,
+  "_id_",
+  gridID,
+  "_wgs84.tif"
+)
+
+mergeAndExport(files = files, out_path =out_path, aoi = aoi )
 
 # #standard
 # standardizeNAIP(
