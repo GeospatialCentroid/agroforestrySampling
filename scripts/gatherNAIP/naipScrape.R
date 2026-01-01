@@ -13,29 +13,13 @@ grid100 <- sf::st_read("data/derived/grids/grid100km_aea.gpkg")
 # Validated_X12-624_26060_2020_dealiased
 twoMile <- sf::st_read("data/products/modelGrids/two_sq_grid.gpkg")
 
-
 # regenerating 2 mile grids  ---------------------------------------------
 # establish table of naip dates and grid elements
-n10 <- c(1200, 2403, 16513, 27785, 26060)
-n16 <- c(12560, 17395, 30590)
-n20 <- c(
-  1203,
-  2572,
-  5238,
-  5551,
-  8690,
-  9472,
-  12000,
-  12632,
-  13638,
-  24161,
-  24675,
-  26060
-)
+n20 <- c(19763)
 # store as df
 df <- data.frame(
-  year = c(rep(2010, 5), rep(2016, 3), rep(2020, 12)),
-  gridID = c(n10, n16, n20)
+  year = 2020,
+  gridID = n20
 )
 
 process_naip_2mile <- function(

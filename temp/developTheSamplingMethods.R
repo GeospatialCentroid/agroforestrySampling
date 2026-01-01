@@ -3,8 +3,6 @@
 # focus on single MLRA for 2020
 # 80 66 Dakota-Nebraska Eroded Tableland
 # get the attibutes to all single 1km grids
-#
-
 pacman::p_load(targets, terra, dplyr, readr, tigris, classInt, forcats, purrr)
 
 # load in some existing targets
@@ -53,11 +51,9 @@ addZscoreMetrics <- function(df, target_cols) {
       next
     }
     # 2. Calculate Mean and SD for the current column
-    # We use [[col]] to dynamically access the column by string name
     mu <- mean(df[[col]], na.rm = TRUE)
     sigma <- sd(df[[col]], na.rm = TRUE)
     # 3. Calculate the Absolute Z-score
-    # We construct a new column name: e.g., "percentRiparian_abs_z"
     z_col_name <- paste0(col, "_Zscore")
     # Calculate and assign the absolute z-score to the new column
     df[[z_col_name]] <- abs((df[[col]] - mu) / sigma)
