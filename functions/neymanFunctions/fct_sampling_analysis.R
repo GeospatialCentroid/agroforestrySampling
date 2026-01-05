@@ -1,13 +1,18 @@
 run_neyman_pipeline <- function(clean_df, mlra_id, year, strat_var, dir_res, dir_plot) {
   
   message("      Running Sampling Analysis...")
+  # Calculate how many distinct values exist in the column (e.g., 0, 10, 40 = 3 distinct)
+  n_distinct_vals <- n_distinct(clean_df[[strat_var]])
+  
+  # If we have 3 or more distinct values, use 3 clusters. 
+  k_centers <- ifelse(n_distinct_vals >= 3, 3, n_distinct_vals)
   
   # 1. Prepare Data
   df_sampling <- clean_df |>
     dplyr::select(gridID, percentTOF, areas = gridArea, strat_var = dplyr::all_of(strat_var)) |>
     dplyr::filter(is.finite(strat_var)) |>
     dplyr::mutate(
-      group_kmeans = kmeans(strat_var, centers = 3)$cluster,
+      group_kmeans = kmeans(strat_var, centers = k_centers)$cluster,
       group_equal  = cut(strat_var, 3, labels = FALSE),
       group_srs    = 1
     )
