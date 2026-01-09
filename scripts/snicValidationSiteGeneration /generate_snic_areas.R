@@ -6,23 +6,25 @@
 pacman::p_load(rstac,snic, sf, terra, dplyr, tmap, rlang, httr, tictoc, purrr, furrr)
 tmap::tmap_mode("view")
 
-source("functions/naipScrape.R")
-source("functions/snicParameters.R")
+source("functions/naipScrape.R") # only works for 2016 and 2020 
+source("functions/snicParameters.R") # snic processing 
 
 # required inputs  --------------------------------------------------------
 grid100 <- sf::st_read("data/derived/grids/grid100km_aea.gpkg")
-
+qtm(grid100)
+# 1478 - nw NE 
+# 1351 - se NE
 # download and process NAIP image ----------------------------------------------------------------
 ## probably best to make this a function accepting either a point or a grid id for better integration into 
 ## the snic workflow 
 
 # point example 
-point <- c(-98.55915251753592,41.24362217062013)
+point <- c(-113.55915251753592,36.24362217062013)
 aoi <- getAOI(grid100 = grid100, point = point)
 qtm(aoi)
 
 # grid id base approach 
-aoi <- getAOI(grid100 = grid100, id = "1416-1-d-2-1" )
+aoi <- getAOI(grid100 = grid100, id = "1349-4-d-2-1" )
 qtm(aoi)
 
 # test for year
