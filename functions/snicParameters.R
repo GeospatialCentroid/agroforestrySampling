@@ -40,7 +40,7 @@ generate_scaled_seeds <- function(r) {
 #' @param output_dir Directory string where files should be saved.
 #' @param file_id grid id for the 1km area that naip was generated 
 #' @param compactness SNIC compactness parameter. Something we might need to test 
-process_segmentations <- function(r, seed_list, output_dir, file_id, compactness = 0.2) {
+process_segmentations <- function(r, seed_list, output_dir, file_id, year, compactness = 0.2) {
   
   # Ensure output directory exists
   if (!dir.exists(output_dir)) {
@@ -66,7 +66,7 @@ process_segmentations <- function(r, seed_list, output_dir, file_id, compactness
     seg_poly <- terra::as.polygons(seg_rast, dissolve = TRUE)
     
     # export 
-    out_name <- file.path(output_dir, paste0("seg_", file_id, "_", label, ".gpkg"))
+    out_name <- file.path(output_dir, paste0("seg_", file_id, "_", label, "_",year,".gpkg"))
     
     if (!file.exists(out_name)) {
       terra::writeVector(x = seg_poly, filename = out_name)

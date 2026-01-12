@@ -8,6 +8,7 @@ tmap::tmap_mode("view")
 
 source("functions/naipScrape.R") # only works for 2016 and 2020 
 source("functions/snicParameters.R") # snic processing 
+source("functions/compileAndExportSNICResults.R") # snic processing 
 
 # required inputs  --------------------------------------------------------
 grid100 <- sf::st_read("data/derived/grids/grid100km_aea.gpkg")
@@ -36,17 +37,6 @@ year <- "2020"
 exportFolder <- "naip_grids_1km"
 gridID <- aoi$id
 
-# # download naip
-downloadNAIP(aoi = aoi, year = year, exportFolder = exportFolder)
-
-# files 
-files <- list.files(
-  exportFolder,
-  pattern = paste0(year, "_id_", gridID),
-  full.names = TRUE
-) 
-
-message(paste("Processing Grid:", gridID, "Year:", year))
 out_path <- paste0(
   "data/derived/naipExports/naip_",
   year,
@@ -54,23 +44,38 @@ out_path <- paste0(
   gridID,
   "_wgs84.tif"
 )
-# combined multiple naip file if there are present into a single 1km feature 
-mergeAndExport(files = files, out_path =out_path, aoi = aoi )
 
+if(!file.exists(out_path)){
+  # # download naip
+  downloadNAIP(aoi = aoi, year = year, exportFolder = exportFolder)
+  
+  # files 
+  files <- list.files(
+    exportFolder,
+    pattern = paste0(year, "_id_", gridID),
+    full.names = TRUE
+  ) 
+  
+  message(paste("Processing Grid:", gridID, "Year:", year))
+  
+  # combined multiple naip file if there are present into a single 1km feature 
+  mergeAndExport(files = files, out_path =out_path, aoi = aoi )
+}
 
 # Generate the Snic imagery 
 r1 <- terra::rast(out_path)
-
 # generate seeds, list of dataframes with specifically spaced lat lon values 
 seeds <- generate_scaled_seeds(r = r1)
-
 # quick viz 
 inspect_seed_density(r = r1, seed_list = seeds, seed_name ="s20" )
-
 # generate snic objects 
 process_segmentations(r = r1,
                       seed_list = seeds, 
                       output_dir = "data/derived/snicExports",
+                      year = year,
                       file_id = aoi$id )
+
+# functions for gathering data and exporting to a uniform file format 
+bundle_and_export(grid_id = aoi$id, year = year)
 
 
