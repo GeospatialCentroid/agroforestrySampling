@@ -20,20 +20,23 @@ qtm(grid100)
 ## the snic workflow 
 
 # point example 
-point <- c(-113.55915251753592,36.24362217062013)
+# conifer area in the black hills 43.83921016920668, -103.54724187500132 : 2012 
+# way north dakota 48.84102014004626, -100.03487489663961 : 2018
+# middle texas 32.6638359359873, -98.65188126468227 : 2016
+point <- c(-100.03487489663961,48.84102014004626)
 aoi <- getAOI(grid100 = grid100, point = point)
 qtm(aoi)
 
 # grid id base approach 
-aoi <- getAOI(grid100 = grid100, id = "1349-4-d-2-1" )
-qtm(aoi)
+# aoi <- getAOI(grid100 = grid100, id = "1349-4-d-2-1" )
+# qtm(aoi)
 
 # test for year
 ## probably unnecessary as for nebraska at least it seems to be 2012:2022 every even year
 getNAIPYear(aoi = aoi)
 
 # set year 
-year <- "2020"
+year <- "2018"
 exportFolder <- "naip_grids_1km"
 gridID <- aoi$id
 

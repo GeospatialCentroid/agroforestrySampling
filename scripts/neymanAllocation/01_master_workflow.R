@@ -4,7 +4,7 @@ pacman::p_load(targets, terra, dplyr, readr, purrr, tidyr, furrr)
 walk(list.files("functions/neymanFunctions", full.names = TRUE), source)
 
 # --- CONFIG ---
-MLRA_LIST <-  c(63, 72,  77,  78,  79,  80) #81, 86,  87,  88,  89,  90, 142, 146, 150) #  63  72  77  78  79  80  81  86  87  88  89  90 142 146 150
+MLRA_LIST <-  c(79) #81, 86,  87,  88,  89,  90, 142, 146, 150) #  63  72  77  78  79  80  81  86  87  88  89  90 142 146 150
 YEAR_LIST <- c("2010", "2016", "2020")
 STRAT_VAR <- "Shrubland"
 STATE <- "NE"
