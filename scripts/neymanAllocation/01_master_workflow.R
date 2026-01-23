@@ -4,11 +4,13 @@ pacman::p_load(targets, terra, dplyr, readr, purrr, tidyr, furrr)
 walk(list.files("functions/neymanFunctions", full.names = TRUE), source)
 
 # --- CONFIG ---
-MLRA_LIST <-  c(79) #81, 86,  87,  88,  89,  90, 142, 146, 150) #  63  72  77  78  79  80  81  86  87  88  89  90 142 146 150
-YEAR_LIST <- c("2010", "2016", "2020")
-STRAT_VAR <- "Shrubland"
+MLRA_LIST <-  c(150) #81, 86,  87,  88,  89,  90, 142, 146, 150) #  63  72  77  78  79  80  81  86  87  88  89  90 142 146 150
+YEAR_LIST <- c("2016")
+STRAT_VAR <- "percentRiparian"   # percentRiparian, Water, Developed, Barren, Forest, Shrubland, Herbaceous, Planted, Wetlands
 STATE <- "NE"
 
+# 
+t1 <- sf::st_read("data/derived/mlra/Nebraska_MLRA.gpkg")
 # Initialize Parallel Backend
 # Using 2 cores less than max to prevent system lockup
 plan(multisession, workers = 12)
@@ -120,6 +122,32 @@ final_output <- work_queue |>
 
 # View final structure
 print(final_output)
-
+outputFinalName <-  paste0("data/derived/results/final_output_master_", STRAT_VAR, ".rds")
 # Save
-saveRDS(final_output, file = paste0("data/derived/results/final_output_master_", STRAT_VAR, ".rds"))
+saveRDS(final_output, file =outputFinalName)
+
+
+# --- POST-HOC COMPARISON ---
+# --- FULL COST-BENEFIT TABLE ---
+message("Generating Minimum Sample Size Table (6 Methods)...")
+# Note: This may take a few minutes as it calculates the Random curve
+cost_table <- summarize_sample_requirements(final_output)
+
+print(cost_table)
+write_csv(cost_table, "data/derived/results/method_sample_size_comparison.csv")
+
+
+
+message("Identifying Top Neyman Candidates...")
+# 1. Find the Winner (excluding SRS)
+# This looks at kmeans, equal, quantile, and zeroQuantile
+candidate_rankings <- rank_neyman_candidates(final_output)
+
+# 2. Run the Benchmark
+# For every MLRA/Year, this creates a table comparing:
+# [Winner] vs [Systematic SRS] vs [Pure Random]
+# using the exact same sample size.
+benchmark_table <- compare_winner_vs_baselines(final_output, candidate_rankings)
+
+print(benchmark_table)
+write_csv(benchmark_table, "data/derived/results/final_benchmark_comparison.csv")
