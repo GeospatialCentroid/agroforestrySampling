@@ -12,73 +12,154 @@ source("functions/compileAndExportSNICResults.R") # snic processing
 
 # required inputs  --------------------------------------------------------
 grid100 <- sf::st_read("data/derived/grids/grid100km_aea.gpkg")
-qtm(grid100)
+# qtm(grid100)
 # 1478 - nw NE 
 # 1351 - se NE
+
+# need to pull some 1k grids from the 2mile areas 
+grid2 <- sf::st_read("data/derived/grids/two_sq_grid.gpkg")
+subgrids_2010 <- c(13860, 12560, 17182, 22744, 23045, 2510, 6465)
+subgrids_2016 <- c(30823, 6621)
+subgrids_2020 <- c(17663, 10625, 24675)
+
+# do a random selection of grid2 features 
+random_rows <- grid2[sample(nrow(grid2), 16), ]
+random_ids <- random_rows$FID_two_grid
+
+# 
+grids16 <- random_ids[1:8]
+grids20 <- random_ids[9:16]
+
+get_grid_centroid <- function(target_id,data) {
+  # 1. Filter for the specific ID
+  feature <- data %>% 
+    filter(FID_two_grid == target_id)
+  
+  # 2. Safety check: ensure the feature exists
+  if (nrow(feature) == 0) {
+    stop("ID not found in the dataset.")
+  }
+  
+  # 3. Calculate Centroid
+  # Note: st_centroid works on s2 (spherical) geometry by default in modern sf versions
+  centroid_geometry <- st_centroid(st_geometry(feature))
+  
+  # 4. Extract Coordinates (returns a matrix)
+  coords <- st_coordinates(centroid_geometry)
+  
+  # 5. Format output
+  return(data.frame(
+    ID = target_id,
+    Lon = coords[1, "X"],
+    Lat = coords[1, "Y"]
+  ))
+}
+
+# gather data from sources 
+p20 <-purrr::map_dfr(.x = subgrids_2020, 
+               .f = get_grid_centroid,
+               data = grid2)
+p16 <-purrr::map_dfr(.x = subgrids_2016, 
+                     .f = get_grid_centroid,
+                     data = grid2)
+p10 <-purrr::map_dfr(.x = subgrids_2010, 
+                     .f = get_grid_centroid,
+                     data = grid2)
+
+g16 <- purrr::map_dfr(.x = grids16, 
+                      .f = get_grid_centroid,
+                      data = grid2)
+g20 <- purrr::map_dfr(.x = grids20, 
+                      .f = get_grid_centroid,
+                      data = grid2)
+# download and process NAIP image ----------------------------------------------------------------
+process_naip_snic <- function(year, lat, lon, grid100, export_base = "data/derived") {
+  
+  # 1. Setup paths and AOI
+  point <- c(lon, lat)
+  aoi <- getAOI(grid100 = grid100, point = point)
+  gridID <- aoi$id
+  
+  # Define directory structure
+  naip_dir <- file.path(export_base, "naipExports")
+  snic_dir <- file.path(export_base, "snicExports")
+  temp_download_dir <- "naip_grids_1km"
+  
+  # Ensure directories exist
+  if (!dir.exists(naip_dir)) dir.create(naip_dir, recursive = TRUE)
+  if (!dir.exists(snic_dir)) dir.create(snic_dir, recursive = TRUE)
+  
+  out_path <- file.path(naip_dir, paste0("naip_", year, "_id_", gridID, "_wgs84.tif"))
+  
+  # 2. Download and Merge if file doesn't exist
+  if (!file.exists(out_path)) {
+    message(paste("--- Downloading & Merging Grid:", gridID, "Year:", year, "---"))
+    
+    downloadNAIP(aoi = aoi, year = year, exportFolder = temp_download_dir)
+    
+    files <- list.files(
+      temp_download_dir,
+      pattern = paste0(year, "_id_", gridID),
+      full.names = TRUE
+    )
+    
+    if (length(files) == 0) {
+      stop(paste("No NAIP files found for ID:", gridID, "in year:", year))
+    }
+    
+    mergeAndExport(files = files, out_path = out_path, aoi = aoi)
+  } else {
+    message(paste("--- Existing TIF found for Grid:", gridID, ". Skipping Download. ---"))
+  }
+  
+  # 3. SNIC Processing
+  message(paste("--- Generating SNIC Segmentation for:", gridID, "---"))
+  r1 <- terra::rast(out_path)
+  
+  # Generate seeds (lat/lon spacing)
+  seeds <- generate_scaled_seeds(r = r1)
+  
+  # Process segmentations
+  process_segmentations(
+    r = r1,
+    seed_list = seeds,
+    output_dir = snic_dir,
+    year = year,
+    file_id = gridID
+  )
+  
+  # 4. Final Bundle
+  message(paste("--- Bundling Final Data for ID:", gridID, "---"))
+  bundle_and_export(grid_id = gridID, year = year)
+  
+  return(invisible(out_path))
+}
+
+
 # download and process NAIP image ----------------------------------------------------------------
 ## probably best to make this a function accepting either a point or a grid id for better integration into 
 ## the snic workflow 
 
-# point example 
-# conifer area in the black hills 43.83921016920668, -103.54724187500132 : 2012 
-# way north dakota 48.84102014004626, -100.03487489663961 : 2018
-# middle texas 32.6638359359873, -98.65188126468227 : 2016
-point <- c(-100.03487489663961,48.84102014004626)
-aoi <- getAOI(grid100 = grid100, point = point)
-qtm(aoi)
-
-# grid id base approach 
-# aoi <- getAOI(grid100 = grid100, id = "1349-4-d-2-1" )
-# qtm(aoi)
-
-# test for year
-## probably unnecessary as for nebraska at least it seems to be 2012:2022 every even year
-getNAIPYear(aoi = aoi)
-
-# set year 
-year <- "2018"
-exportFolder <- "naip_grids_1km"
-gridID <- aoi$id
-
-out_path <- paste0(
-  "data/derived/naipExports/naip_",
-  year,
-  "_id_",
-  gridID,
-  "_wgs84.tif"
-)
-
-if(!file.exists(out_path)){
-  # # download naip
-  downloadNAIP(aoi = aoi, year = year, exportFolder = exportFolder)
-  
-  # files 
-  files <- list.files(
-    exportFolder,
-    pattern = paste0(year, "_id_", gridID),
-    full.names = TRUE
-  ) 
-  
-  message(paste("Processing Grid:", gridID, "Year:", year))
-  
-  # combined multiple naip file if there are present into a single 1km feature 
-  mergeAndExport(files = files, out_path =out_path, aoi = aoi )
+## sites within validation imagery 
+for(i in 1:nrow(p20)){
+  process_naip_snic(year = 2020, lat = p20$Lat[i], lon = p20$Lon[i],
+                    grid100 = grid100)
+}
+# 
+for(i in 1:nrow(p16)){
+  process_naip_snic(year = 2016, lat = p16$Lat[i], lon = p16$Lon[i],
+                    grid100 = grid100)
 }
 
-# Generate the Snic imagery 
-r1 <- terra::rast(out_path)
-# generate seeds, list of dataframes with specifically spaced lat lon values 
-seeds <- generate_scaled_seeds(r = r1)
-# quick viz 
-inspect_seed_density(r = r1, seed_list = seeds, seed_name ="s20" )
-# generate snic objects 
-process_segmentations(r = r1,
-                      seed_list = seeds, 
-                      output_dir = "data/derived/snicExports",
-                      year = year,
-                      file_id = aoi$id )
-
-# functions for gathering data and exporting to a uniform file format 
-bundle_and_export(grid_id = aoi$id, year = year)
+# random selection 2016 
+for(i in 1:nrow(g16)){
+  process_naip_snic(year = 2016, lat = g16$Lat[i], lon = g16$Lon[i],
+                    grid100 = grid100)
+}
+# random selection 2020
+for(i in 1:nrow(g20)){
+  process_naip_snic(year = 2020, lat = g20$Lat[i], lon = g20$Lon[i],
+                    grid100 = grid100)
+}
 
 
