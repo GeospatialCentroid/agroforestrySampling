@@ -6,7 +6,7 @@
 # Output:  A combined CSV of static attributes for each 1km grid cell per MLRA.
 # ==============================================================================
 
-source("scripts/neyman2/00_config.r")
+# source("scripts/neyman2/00_config.r")
 
 # --- 1. SETUP & LOCAL PATHS ---------------------------------------------------
 # Define local output directory for static attributes
