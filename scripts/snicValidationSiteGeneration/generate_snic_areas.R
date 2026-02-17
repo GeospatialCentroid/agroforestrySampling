@@ -14,7 +14,8 @@ pacman::p_load(
   httr,
   tictoc,
   purrr,
-  furrr
+  furrr,
+  tidyr
 )
 tmap::tmap_mode("view")
 
@@ -30,9 +31,28 @@ grid100 <- sf::st_read("data/derived/grids/grid100km_aea.gpkg")
 
 # need to pull some 1k grids from the 2mile areas
 grid2 <- sf::st_read("data/derived/grids/two_sq_grid.gpkg")
-subgrids_2010 <- c(13860, 12560, 17182, 22744, 23045, 2510, 6465)
-subgrids_2016 <- c(30823, 6621)
-subgrids_2020 <- c(17663, 10625, 24675)
+# subgrids_2010 <- c(13860, 12560, 17182, 22744, 23045, 2510, 6465)
+# subgrids_2016 <- c(30823, 6621)
+# subgrids_2020 <- c(17663, 10625, 24675)
+
+mlra <- sf::st_read("data/raw/mlra/MLRA_52_2022/MLRA_52.shp")
+# working with 76 for next set of values 
+mlra76 <- mlra[mlra$MLRA_ID == "76", ]
+sf::st_area(mlra76)
+qtm(mlra76)
+
+# generate random points within the mlra objec 
+samplePoints <- st_sample(mlra76, size = 15, type = "random")
+# parse out lat long 
+pointsDF <- samplePoints |> 
+  st_as_sf() |>
+  mutate(
+    lon = st_coordinates(samplePoints)[,1],
+    lat = st_coordinates(samplePoints)[,2],
+    year = c(rep("2016", 7), rep("2020", 8))
+  )
+m76_16 <- pointsDF[pointsDF$year == "2016", ]
+m76_20 <- pointsDF[pointsDF$year == "2020", ]
 
 # do a random selection of grid2 features
 random_rows <- grid2[sample(nrow(grid2), 16), ]
@@ -163,6 +183,25 @@ process_naip_snic <- function(
 # download and process NAIP image ----------------------------------------------------------------
 ## probably best to make this a function accepting either a point or a grid id for better integration into
 ## the snic workflow
+
+# naip imagery for MLRA 76 --- just assumed that 2016 would have imagery 
+for (i in 1:nrow(m76_16)) {
+  process_naip_snic(
+    year = 2016,
+    lat = m76_16$lat[i],
+    lon = m76_16$lon[i],
+    grid100 = grid100
+  )
+}
+for (i in 1:nrow(m76_20)) {
+  process_naip_snic(
+    year = 2020,
+    lat = m76_20$lat[i],
+    lon = m76_20$lon[i],
+    grid100 = grid100
+  )
+}
+
 
 ## sites within validation imagery
 for (i in 1:nrow(p20)) {
